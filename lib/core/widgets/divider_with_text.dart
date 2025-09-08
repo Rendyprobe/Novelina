@@ -10,7 +10,7 @@ class DividerWithText extends StatelessWidget {
       child: Container(
         height: 1,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.25),
+          color: Colors.white.withValues(alpha: 0.25),
           borderRadius: BorderRadius.circular(2),
         ),
       ),
@@ -27,7 +27,7 @@ class DividerWithText extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               letterSpacing: 1.1,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ),

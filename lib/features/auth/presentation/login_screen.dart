@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             suffixIcon: Container(
                               margin: const EdgeInsets.only(right: 8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.12),
+                                color: Colors.white.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(Icons.mark_email_unread_outlined),
@@ -156,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         label: const Text('Continue With Google'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: BorderSide(color: Colors.white.withOpacity(0.35)),
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                       ),
