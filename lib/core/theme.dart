@@ -11,13 +11,13 @@ ThemeData buildAppTheme() {
     fontFamily: 'Roboto',
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white.withOpacity(0.10),
-      hintStyle: TextStyle(color: Colors.white.withOpacity(0.75)),
+      fillColor: Colors.white.withValues(alpha: 0.10),
+      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
       labelStyle: const TextStyle(color: Colors.white70),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),

@@ -15,8 +15,8 @@ class NightSkyBackground extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned(top: -60, left: -40, child: _glow(220, const Color(0xFF2E5BFF).withOpacity(0.35))),
-          Positioned(bottom: -80, right: -50, child: _glow(260, const Color(0xFF00E5FF).withOpacity(0.22))),
+          Positioned(top: -60, left: -40, child: _glow(220, const Color(0xFF2E5BFF).withValues(alpha: 0.35))),
+          Positioned(bottom: -80, right: -50, child: _glow(260, const Color(0xFF00E5FF).withValues(alpha: 0.22))),
           Align(
             alignment: Alignment.bottomCenter,
             child: IgnorePointer(
@@ -30,7 +30,7 @@ class NightSkyBackground extends StatelessWidget {
                   ),
                 ),
                 child: CustomPaint(
-                  painter: MosquePainter(color: Colors.black.withOpacity(0.30)),
+                  painter: MosquePainter(color: Colors.black.withValues(alpha: 0.30)),
                   child: const SizedBox.expand(),
                 ),
               ),

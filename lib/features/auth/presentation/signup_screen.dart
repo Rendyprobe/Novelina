@@ -75,7 +75,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Text(
                       'buat akun anda untuk menyimpan perkembangan',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
                     ),
                     const SizedBox(height: 18),
 
