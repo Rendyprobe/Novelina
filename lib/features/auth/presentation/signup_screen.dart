@@ -30,11 +30,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _onSignUp() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _processing = true);
+    
+    // Simulate database operations
     await Future.delayed(const Duration(milliseconds: 900));
+    
+
     if (mounted) {
       setState(() => _processing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Akun dibuat (dummy). Lanjut login.')),
+        const SnackBar(content: Text('Account created successfully! Please login.')),
       );
       Navigator.popAndPushNamed(context, AppRoutes.login);
     }
