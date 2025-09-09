@@ -3,6 +3,8 @@ import 'core/theme.dart';
 import 'routes/routes.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/signup_screen.dart';
+import 'features/home/presentation/home_screen.dart';
+import 'features/splash/splash_screen.dart';
 
 void main() {
   runApp(const QuranApp());
@@ -15,13 +17,14 @@ class QuranApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "Qur'an App",
+      title: "Al-Qur'an App",
       theme: buildAppTheme(),
-      initialRoute: AppRoutes.login,
+      initialRoute: AppRoutes.splash,
       routes: {
-        AppRoutes.home: (c) => const LoginScreen(), // sementara
-        AppRoutes.login: (c) => const LoginScreen(),
-        AppRoutes.signup: (c) => const SignUpScreen(),
+        AppRoutes.splash: (context) => const SplashScreen(),
+        AppRoutes.home: (context) => const HomeScreen(),
+        AppRoutes.login: (context) => const LoginScreen(),
+        AppRoutes.signup: (context) => const SignUpScreen(),
       },
     );
   }

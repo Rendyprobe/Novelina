@@ -28,12 +28,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _onSignIn() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _signingIn = true);
+    
+    // Simulate database operations and session management
     await Future.delayed(const Duration(milliseconds: 900));
+    
     if (mounted) {
       setState(() => _signingIn = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signed in (dummy). Nanti diarahkan ke beranda.')),
+        const SnackBar(content: Text('Signed in successfully! Redirecting to home...')),
       );
+      // Navigate to home screen after successful login
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     }
   }
 
@@ -53,6 +58,52 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 8),
+
+
+                    // Logo UNESA
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'images/Logo_Unesa.JPG',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback jika logo tidak ditemukan
+                            return Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(
+                                Icons.school,
+                                size: 60,
+                                color: Colors.white70,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+
                     Text(
                       'Sign In',
                       style: TextStyle(
