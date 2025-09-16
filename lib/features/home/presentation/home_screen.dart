@@ -10,6 +10,64 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // List of features with their details
+  final List<Map<String, dynamic>> features = [
+    {
+      'icon': Icons.book,
+      'title': 'Baca Quran',
+      'subtitle': 'Baca dan pelajari Al-Quran',
+      'onTap': () => 'Quran reader coming soon!',
+    },
+    {
+      'icon': Icons.schedule,
+      'title': 'Waktu Sholat',
+      'subtitle': 'Jadwal sholat hari ini',
+      'onTap': () => 'Prayer times coming soon!',
+    },
+    {
+      'icon': Icons.location_on,
+      'title': 'Kiblat',
+      'subtitle': 'Arah kiblat dari lokasi Anda',
+      'onTap': () => 'Fitur Kiblat akan segera datang',
+    },
+    {
+      'icon': Icons.bookmark,
+      'title': 'Bookmark',
+      'subtitle': 'Ayat dan doa favorit Anda',
+      'onTap': () => 'Bookmark feature coming soon!',
+    },
+    {
+      'icon': Icons.favorite,
+      'title': 'DOA',
+      'subtitle': 'Koleksi doa harian',
+      'onTap': () => 'Doa collection coming soon!',
+    },
+    {
+      'icon': Icons.star,
+      'title': 'Asmaul Husna',
+      'subtitle': '99 nama indah Allah',
+      'onTap': () => 'Asmaul Husna coming soon!',
+    },
+    {
+      'icon': Icons.history_edu,
+      'title': 'Kisah Nabi & Rasul',
+      'subtitle': 'Kisah inspiratif para nabi',
+      'onTap': () => 'Stories of prophets coming soon!',
+    },
+    {
+      'icon': Icons.track_changes,
+      'title': 'Target Hafalan',
+      'subtitle': 'Pantau progress hafalan Anda',
+      'onTap': () => 'Hafalan tracker coming soon!',
+    },
+    {
+      'icon': Icons.mosque,
+      'title': 'Masjid Terdekat',
+      'subtitle': 'Temukan masjid di sekitar Anda',
+      'onTap': () => 'Nearby mosques coming soon!',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,13 +75,12 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const NightSkyBackground(),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
@@ -58,10 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 30),
-                  
-                  // Prayer Times Card (Placeholder)
-                  Container(
+                ),
+                
+                // Prayer Times Card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -106,77 +165,64 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  
-                  // Quick Actions
-                  const Text(
-                    'Quick Actions',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Features Section
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Fitur Utama',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${features.length} Fitur',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Features List
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: ListView.separated(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: features.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final feature = features[index];
+                        return _buildFeatureCard(
+                          icon: feature['icon'],
+                          title: feature['title'],
+                          subtitle: feature['subtitle'],
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(feature['onTap']())),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildQuickActionCard(
-                          icon: Icons.book,
-                          title: 'Baca Quran',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Quran reader coming soon!')),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildQuickActionCard(
-                          icon: Icons.schedule,
-                          title: 'Waktu Sholat',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Prayer times coming soon!')),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildQuickActionCard(
-                          icon: Icons.location_on,
-                          title: 'Kiblat',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Fitur Kiblat akan segera datang')),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildQuickActionCard(
-                          icon: Icons.favorite,
-                          title: 'Duas',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Duas collection coming soon!')),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+                
+                const SizedBox(height: 20),
+              ],
             ),
           ),
         ],
@@ -184,9 +230,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  Widget _buildQuickActionCard({
+  Widget _buildFeatureCard({
     required IconData icon,
     required String title,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -204,23 +251,71 @@ class _HomeScreenState extends State<HomeScreen> {
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.2),
           ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: Colors.white,
-              size: 32,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF64B5F6), Color(0xFF4DD0E1)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            
+            const SizedBox(width: 16),
+            
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Arrow icon
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white.withValues(alpha: 0.5),
+              size: 16,
             ),
           ],
         ),
