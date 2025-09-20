@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../core/storage_helper.dart';
+import '../../models/novel_model.dart';
 import '../auth/sign_in_screen.dart';
+import 'novel_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,16 +13,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late final List<Novel> _novels;
   String userName = '';
 
   @override
   void initState() {
     super.initState();
+    _novels = const NovelRepository().loadNovels();
     _loadUserData();
   }
 
   void _loadUserData() async {
-    String name = await StorageHelper.getUserName();
+    final name = await StorageHelper.getUserName();
+    if (!mounted) return;
     setState(() {
       userName = name;
     });
@@ -28,12 +33,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _logout() async {
     await StorageHelper.clearUserData();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-      );
-    }
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const SignInScreen()),
+    );
+  }
+
+  void _openNovelDetail(Novel novel) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NovelDetailScreen(novel: novel),
+      ),
+    );
   }
 
   @override
@@ -46,45 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hallo $userName',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const Text(
-                          'Selamat membaca!',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      onPressed: _logout,
-                      icon: const Icon(
-                        Icons.logout,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Content
+              _buildHeader(),
               Expanded(
                 child: Container(
                   margin: const EdgeInsets.only(top: 20),
@@ -109,19 +84,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-
-                        // Novel Grid
                         Expanded(
-                          child: GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 15,
-                              mainAxisSpacing: 15,
-                              childAspectRatio: 0.7,
-                            ),
-                            itemCount: 6,
+                          child: ListView.separated(
+                            itemCount: _novels.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 16),
                             itemBuilder: (context, index) {
-                              return _buildNovelCard(index);
+                              final novel = _novels[index];
+                              return _NovelListItem(
+                                novel: novel,
+                                onTap: () => _openNovelDetail(novel),
+                              );
                             },
                           ),
                         ),
@@ -134,8 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
-      // Bottom Navigation
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.cardGradient,
@@ -173,100 +143,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNovelCard(int index) {
-    final novels = [
-      {'title': 'Laskar Pelangi', 'author': 'Andrea Hirata', 'rating': '4.8'},
-      {'title': 'Ayat-Ayat Cinta', 'author': 'Habiburrahman El Shirazy', 'rating': '4.7'},
-      {'title': 'Perahu Kertas', 'author': 'Dee Lestari', 'rating': '4.6'},
-      {'title': 'Negeri 5 Menara', 'author': 'Ahmad Fuadi', 'rating': '4.9'},
-      {'title': 'Sang Pemimpi', 'author': 'Andrea Hirata', 'rating': '4.5'},
-      {'title': 'Tetralogi Buru', 'author': 'Pramoedya Ananta Toer', 'rating': '4.8'},
-    ];
-
+  Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryBlue.withValues(alpha: 0.1),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Book Cover
-          Expanded(
-            flex: 3,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.cardGradient,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(15),
-                  topRight: Radius.circular(15),
-                ),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.menu_book,
-                  size: 50,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hallo $userName',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-            ),
-          ),
-
-          // Book Info
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    novels[index]['title']!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryBlue,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    novels[index]['author']!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Colors.amber,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        novels[index]['rating']!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              const Text(
+                'Selamat membaca!',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white70,
+                ),
               ),
+            ],
+          ),
+          IconButton(
+            onPressed: _logout,
+            icon: const Icon(
+              Icons.logout,
+              color: Colors.white,
+              size: 28,
             ),
           ),
         ],
@@ -275,10 +183,157 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class _NovelListItem extends StatelessWidget {
+  const _NovelListItem({
+    required this.novel,
+    required this.onTap,
+  });
 
+  final Novel novel;
+  final VoidCallback onTap;
 
+  @override
+  Widget build(BuildContext context) {
+    final isFeatured = novel is FeaturedNovel;
+    final featureTag = isFeatured ? (novel as FeaturedNovel).featureTag : null;
 
-
-
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      shadowColor: AppColors.primaryBlue.withValues(alpha: 0.12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: AppColors.cardGradient,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.menu_book,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            novel.title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryBlue,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (featureTag != null) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                featureTag,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryBlue,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      novel.author,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      novel.marketingMessage(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.star,
+                        size: 18,
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        novel.formattedRating,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${novel.chapters} Bab',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 

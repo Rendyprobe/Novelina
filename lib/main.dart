@@ -12,7 +12,7 @@ class NovelReaderApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Novel Reader',
+      title: 'Novelina',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         primaryColor: AppColors.primaryBlue,
