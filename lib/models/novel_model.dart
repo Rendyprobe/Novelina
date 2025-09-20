@@ -31,6 +31,7 @@ class Novel extends LiteratureItem {
   final double _rating;
   final int _chapters;
   final String _genre;
+  final String _content;
 
   Novel({
     required super.id,
@@ -40,19 +41,22 @@ class Novel extends LiteratureItem {
     required double rating,
     required int chapters,
     required String genre,
+    required String content,
   })  : _rating = rating,
         _chapters = chapters,
-        _genre = genre;
+        _genre = genre,
+        _content = content;
 
   double get rating => _rating;
   int get chapters => _chapters;
   String get genre => _genre;
+  String get content => _content;
 
   String get formattedRating => _rating.toStringAsFixed(1);
 
   @override
   String marketingMessage() {
-    return '${baseMarketingMessage.toUpperCase()} ? $_genre';
+    return '${baseMarketingMessage.toUpperCase()} - $_genre';
   }
 }
 
@@ -67,6 +71,7 @@ class FeaturedNovel extends Novel {
     required super.rating,
     required super.chapters,
     required super.genre,
+    required super.content,
     String featureTag = 'Pilihan Editor',
   }) : _featureTag = featureTag;
 
@@ -74,7 +79,7 @@ class FeaturedNovel extends Novel {
 
   @override
   String marketingMessage() {
-    return '$featureTag ? Rating ${rating.toStringAsFixed(1)}';
+    return '$featureTag - Rating ${rating.toStringAsFixed(1)}';
   }
 }
 
@@ -93,6 +98,10 @@ class NovelRepository {
         chapters: 18,
         genre: 'Drama Inspiratif',
         featureTag: 'Bestseller Sepanjang Masa',
+        content: _buildPrototypeContent(
+          'Laskar Pelangi',
+          'perjuangan anak-anak Belitung mencari ilmu dengan penuh persahabatan',
+        ),
       ),
       Novel(
         id: 'novel-2',
@@ -103,6 +112,10 @@ class NovelRepository {
         rating: 4.7,
         chapters: 24,
         genre: 'Romansa Religi',
+        content: _buildPrototypeContent(
+          'Ayat-Ayat Cinta',
+          'perjalanan Fahri menyeimbangkan cinta dan iman di Kairo',
+        ),
       ),
       Novel(
         id: 'novel-3',
@@ -113,6 +126,10 @@ class NovelRepository {
         rating: 4.6,
         chapters: 30,
         genre: 'Fiksi Kontemporer',
+        content: _buildPrototypeContent(
+          'Perahu Kertas',
+          'kisah Kugy dan Keenan yang menganyam mimpi melalui seni dan persahabatan',
+        ),
       ),
       FeaturedNovel(
         id: 'novel-4',
@@ -122,6 +139,11 @@ class NovelRepository {
         rating: 4.9,
         chapters: 26,
         genre: 'Coming of Age',
+        featureTag: 'Inspirasi Santri',
+        content: _buildPrototypeContent(
+          'Negeri 5 Menara',
+          'tekad para santri menatap dunia dengan mantra man jadda wajada',
+        ),
       ),
       Novel(
         id: 'novel-5',
@@ -132,6 +154,10 @@ class NovelRepository {
         rating: 4.5,
         chapters: 20,
         genre: 'Drama Inspiratif',
+        content: _buildPrototypeContent(
+          'Sang Pemimpi',
+          'langkah Ikal dan Arai menembus batas untuk meraih mimpi terbesar',
+        ),
       ),
       Novel(
         id: 'novel-6',
@@ -142,8 +168,23 @@ class NovelRepository {
         rating: 4.8,
         chapters: 40,
         genre: 'Sejarah',
+        content: _buildPrototypeContent(
+          'Tetralogi Buru',
+          'perlawanan Minke terhadap kolonialisme dan kebangkitan kesadaran bangsa',
+        ),
       ),
     ];
   }
+
+  String _buildPrototypeContent(String title, String focus) {
+    final buffer = StringBuffer();
+    for (var i = 1; i <= 100; i++) {
+      buffer.writeln(
+        '$title menuturkan $focus melalui kalimat ke-$i yang memperdalam pengalaman membaca.',
+      );
+    }
+    return buffer.toString().trim();
+  }
 }
+
 

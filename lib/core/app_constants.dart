@@ -5,4 +5,5 @@ class AppConstants {
   static const String welcomeMessage = 'Selamat datang di dunia novel';
   static const String loginSuccessMessage = 'Login berhasil!';
   static const String registerSuccessMessage = 'Registrasi berhasil!';
+  static const String logoAsset = 'assets/images/Logo_Novelina.jpg';
 }

@@ -95,10 +95,12 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.menu_book,
-                        size: 50,
-                        color: AppColors.primaryBlue,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(25),
+                        child: Image.asset(
+                          AppConstants.logoAsset,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -272,6 +274,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 }
+
 
 
 
