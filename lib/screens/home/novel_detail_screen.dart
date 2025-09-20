@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_constants.dart';
 import '../../models/novel_model.dart';
+import 'novel_reader_screen.dart';
 
 class NovelDetailScreen extends StatelessWidget {
   const NovelDetailScreen({
@@ -50,17 +52,13 @@ class NovelDetailScreen extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              gradient: AppColors.cardGradient,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Icon(
-                              Icons.menu_book,
-                              color: Colors.white,
-                              size: 42,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              AppConstants.logoAsset,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
                             ),
                           ),
                           const SizedBox(width: 20),
@@ -86,24 +84,30 @@ class NovelDetailScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 12),
                                 Wrap(
+                                  alignment: WrapAlignment.start,
+                                  runAlignment: WrapAlignment.start,
                                   spacing: 12,
                                   runSpacing: 12,
                                   children: [
+                                    // ignore: prefer_const_constructors
                                     _InfoChip(
                                       icon: Icons.star_rounded,
                                       label: novel.formattedRating,
                                       background: Colors.amber.withValues(alpha: 0.2),
                                       foreground: Colors.orange.shade800,
                                     ),
+                                    // ignore: prefer_const_constructors
                                     _InfoChip(
                                       icon: Icons.menu_book_outlined,
-                                      label: '${novel.chapters} Bab',
+                                      label: ' Bab',
                                     ),
+                                    // ignore: prefer_const_constructors
                                     _InfoChip(
                                       icon: Icons.category_outlined,
                                       label: novel.genre,
                                     ),
                                     if (featureTag != null)
+                                      // ignore: prefer_const_constructors
                                       _InfoChip(
                                         icon: Icons.workspace_premium,
                                         label: featureTag,
@@ -147,6 +151,36 @@ class NovelDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 4,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => NovelReaderScreen(novel: novel),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Baca',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -235,3 +269,10 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+

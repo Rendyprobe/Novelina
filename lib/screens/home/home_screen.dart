@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_constants.dart';
 import '../../core/storage_helper.dart';
 import '../../models/novel_model.dart';
 import '../auth/sign_in_screen.dart';
@@ -211,17 +212,13 @@ class _NovelListItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: AppColors.cardGradient,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.menu_book,
-                  color: Colors.white,
-                  size: 28,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  AppConstants.logoAsset,
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(width: 16),
@@ -335,5 +332,9 @@ class _NovelListItem extends StatelessWidget {
     );
   }
 }
+
+
+
+
 
 

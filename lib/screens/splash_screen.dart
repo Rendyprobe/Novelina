@@ -108,10 +108,12 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.menu_book,
-                          size: 60,
-                          color: AppColors.primaryBlue,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30),
+                          child: Image.asset(
+                            AppConstants.logoAsset,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 30),
@@ -164,4 +166,5 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
+
 
