@@ -8,7 +8,7 @@ Novelina adalah aplikasi Flutter untuk membaca novel secara praktis dan nyaman d
 
 | Home Screen | Reading View |
 |-------------|--------------|
-| <img src="https://i.ibb.co.com/yFJRnRnX/Screenshot-20250921-103207.jpg" alt="Home" width="50"/> | <img src="https://i.ibb.co.com/XZ5sZM0Z/Screenshot-20250921-103224.jpg" alt="Reading" width="50"/> |
+| <img src="https://i.ibb.co.com/yFJRnRnX/Screenshot-20250921-103207.jpg" alt="Home" width="200"/> | <img src="https://i.ibb.co.com/XZ5sZM0Z/Screenshot-20250921-103224.jpg" alt="Reading" width="200"/> |
 ## 🚀 Instalasi dan Menjalankan
 
 ### Prasyarat
