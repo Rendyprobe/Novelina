@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_constants.dart';
 import '../../core/storage_helper.dart';
-import '../home/home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -44,26 +43,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
       String email = _emailController.text.trim();
       String name = _nameController.text.trim();
 
-      await StorageHelper.setLoginStatus(true);
+      await StorageHelper.setLoginStatus(false);
       await StorageHelper.setUserData(email, name);
 
       setState(() {
         _isLoading = false;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppConstants.registerSuccessMessage),
-            backgroundColor: AppColors.secondaryBlue,
-          ),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+      if (!mounted) {
+        return;
       }
+
+      Navigator.pop(context, true);
     }
   }
 

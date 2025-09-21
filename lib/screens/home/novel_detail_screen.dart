@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
-import '../../core/app_constants.dart';
 import '../../models/novel_model.dart';
-import 'novel_reader_screen.dart';
 
 class NovelDetailScreen extends StatelessWidget {
   const NovelDetailScreen({
@@ -55,7 +53,7 @@ class NovelDetailScreen extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(20),
                             child: Image.asset(
-                              AppConstants.logoAsset,
+                              novel.coverAsset,
                               width: 80,
                               height: 80,
                               fit: BoxFit.cover,
@@ -167,10 +165,9 @@ class NovelDetailScreen extends StatelessWidget {
                       elevation: 4,
                     ),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => NovelReaderScreen(novel: novel),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cerita akan segera hadir'),
                         ),
                       );
                     },
@@ -269,6 +266,10 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
+
+
+
 
 
 
