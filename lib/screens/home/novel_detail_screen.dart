@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../models/novel_model.dart';
+import 'novel_reader_screen.dart';
 
 class NovelDetailScreen extends StatelessWidget {
   const NovelDetailScreen({
@@ -83,29 +84,24 @@ class NovelDetailScreen extends StatelessWidget {
                                 const SizedBox(height: 12),
                                 Wrap(
                                   alignment: WrapAlignment.start,
-                                  runAlignment: WrapAlignment.start,
                                   spacing: 12,
                                   runSpacing: 12,
                                   children: [
-                                    // ignore: prefer_const_constructors
                                     _InfoChip(
                                       icon: Icons.star_rounded,
                                       label: novel.formattedRating,
                                       background: Colors.amber.withValues(alpha: 0.2),
                                       foreground: Colors.orange.shade800,
                                     ),
-                                    // ignore: prefer_const_constructors
                                     _InfoChip(
                                       icon: Icons.menu_book_outlined,
-                                      label: ' Bab',
+                                      label: '${novel.chapters} Bab',
                                     ),
-                                    // ignore: prefer_const_constructors
                                     _InfoChip(
                                       icon: Icons.category_outlined,
                                       label: novel.genre,
                                     ),
                                     if (featureTag != null)
-                                      // ignore: prefer_const_constructors
                                       _InfoChip(
                                         icon: Icons.workspace_premium,
                                         label: featureTag,
@@ -119,33 +115,54 @@ class NovelDetailScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      Text(
-                        novel.marketingMessage(),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(height: 1, color: Color(0xFFE0E0E0)),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Sinopsis',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 20),
                       Text(
                         novel.synopsis,
-                        style: const TextStyle(
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.7,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.primaryBlue.withValues(alpha: 0.12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.08),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Ringkasan Singkat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        novel.marketingMessage(),
+                        style: TextStyle(
                           fontSize: 14,
-                          height: 1.5,
-                          color: Colors.black87,
+                          height: 1.6,
+                          color: Colors.grey.shade800,
                         ),
                       ),
                     ],
@@ -165,18 +182,26 @@ class NovelDetailScreen extends StatelessWidget {
                       elevation: 4,
                     ),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Cerita akan segera hadir'),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NovelReaderScreen(novel: novel),
                         ),
                       );
                     },
-                    child: const Text(
-                      'Baca',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.menu_book, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Baca Sekarang',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -266,14 +291,3 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
