@@ -245,13 +245,27 @@ class _SignInScreenState extends State<SignInScreen> {
                           style: TextStyle(color: Colors.white70),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final result = await Navigator.push<bool>(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const SignUpScreen(),
                               ),
                             );
+
+                            if (result == true) {
+                              if (!mounted) {
+                                return;
+                              }
+
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(AppConstants.registerSuccessMessage),
+                                  backgroundColor: AppColors.secondaryBlue,
+                                ),
+                              );
+                            }
                           },
                           child: const Text(
                             'Daftar',

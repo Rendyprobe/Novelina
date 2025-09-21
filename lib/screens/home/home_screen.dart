@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
-import '../../core/app_constants.dart';
 import '../../core/storage_helper.dart';
 import '../../models/novel_model.dart';
 import '../auth/sign_in_screen.dart';
@@ -215,7 +214,7 @@ class _NovelListItem extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.asset(
-                  AppConstants.logoAsset,
+                  novel.coverAsset,
                   width: 56,
                   height: 56,
                   fit: BoxFit.cover,

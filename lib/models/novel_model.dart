@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 
 abstract class LiteratureItem {
   final String _id;
@@ -32,6 +32,7 @@ class Novel extends LiteratureItem {
   final int _chapters;
   final String _genre;
   final String _content;
+  final String _coverAsset;
 
   Novel({
     required super.id,
@@ -42,15 +43,18 @@ class Novel extends LiteratureItem {
     required int chapters,
     required String genre,
     required String content,
+    required String coverAsset,
   })  : _rating = rating,
         _chapters = chapters,
         _genre = genre,
-        _content = content;
+        _content = content,
+        _coverAsset = coverAsset;
 
   double get rating => _rating;
   int get chapters => _chapters;
   String get genre => _genre;
   String get content => _content;
+  String get coverAsset => _coverAsset;
 
   String get formattedRating => _rating.toStringAsFixed(1);
 
@@ -72,6 +76,7 @@ class FeaturedNovel extends Novel {
     required super.chapters,
     required super.genre,
     required super.content,
+    required super.coverAsset,
     String featureTag = 'Pilihan Editor',
   }) : _featureTag = featureTag;
 
@@ -102,6 +107,7 @@ class NovelRepository {
           'Laskar Pelangi',
           'perjuangan anak-anak Belitung mencari ilmu dengan penuh persahabatan',
         ),
+        coverAsset: 'assets/images/Laskar_pelangi_sampul.jpg',
       ),
       Novel(
         id: 'novel-2',
@@ -116,6 +122,7 @@ class NovelRepository {
           'Ayat-Ayat Cinta',
           'perjalanan Fahri menyeimbangkan cinta dan iman di Kairo',
         ),
+        coverAsset: 'assets/images/Ayatayatcinta.jpg',
       ),
       Novel(
         id: 'novel-3',
@@ -130,6 +137,7 @@ class NovelRepository {
           'Perahu Kertas',
           'kisah Kugy dan Keenan yang menganyam mimpi melalui seni dan persahabatan',
         ),
+        coverAsset: 'assets/images/Perahu_Kertas.jpg',
       ),
       FeaturedNovel(
         id: 'novel-4',
@@ -144,6 +152,7 @@ class NovelRepository {
           'Negeri 5 Menara',
           'tekad para santri menatap dunia dengan mantra man jadda wajada',
         ),
+        coverAsset: 'assets/images/Negeri5Menara.jpg',
       ),
       Novel(
         id: 'novel-5',
@@ -158,6 +167,7 @@ class NovelRepository {
           'Sang Pemimpi',
           'langkah Ikal dan Arai menembus batas untuk meraih mimpi terbesar',
         ),
+        coverAsset: 'assets/images/Sang_Pemimpi.jpg',
       ),
       Novel(
         id: 'novel-6',
@@ -172,13 +182,14 @@ class NovelRepository {
           'Tetralogi Buru',
           'perlawanan Minke terhadap kolonialisme dan kebangkitan kesadaran bangsa',
         ),
+        coverAsset: 'assets/images/Tetralogi_buru.jpg',
       ),
     ];
   }
 
   String _buildPrototypeContent(String title, String focus) {
     final buffer = StringBuffer();
-    for (var i = 1; i <= 100; i++) {
+    for (var i = 1; i <= 8; i++) {
       buffer.writeln(
         '$title menuturkan $focus melalui kalimat ke-$i yang memperdalam pengalaman membaca.',
       );
@@ -186,5 +197,3 @@ class NovelRepository {
     return buffer.toString().trim();
   }
 }
-
-

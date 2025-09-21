@@ -3,11 +3,11 @@ import 'core/app_colors.dart';
 import 'screens/splash_screen.dart';
 
 void main() {
-  runApp(const NovelReaderApp());
+  runApp(const NovelinaApp());
 }
 
-class NovelReaderApp extends StatelessWidget {
-  const NovelReaderApp({super.key});
+class NovelinaApp extends StatelessWidget {
+  const NovelinaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
