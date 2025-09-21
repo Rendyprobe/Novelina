@@ -1,16 +1,59 @@
-# alquran
+# NOVELINA
 
-A new Flutter project.
+Novelina adalah aplikasi Flutter untuk membaca novel secara praktis dan nyaman di perangkat mobile. Aplikasi ini dirancang agar pengguna dapat menikmati berbagai koleksi novel dengan antarmuka yang sederhana namun menarik.
 
-## Getting Started
+## 📱 Preview Aplikasi
 
-This project is a starting point for a Flutter application.
+### Screenshots
 
-A few resources to get you started if this is your first Flutter project:
+| Home Screen | Reading View | Library |
+|-------------|--------------|---------|
+| ![Home](assets/images/screenshot_home.png) | ![Reading](assets/images/screenshot_reading.png) | ![Library](assets/images/screenshot_library.png) |
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🚀 Instalasi dan Menjalankan
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Prasyarat
+
+Pastikan Anda telah menginstal:
+- [Flutter SDK](https://flutter.dev/docs/get-started/install)
+- [Android Studio](https://developer.android.com/studio) atau [VS Code](https://code.visualstudio.com/)
+- [Git](https://git-scm.com/)
+
+### Langkah Instalasi
+
+1. **Clone repositori**
+   ```bash
+   git clone https://github.com/Rendyprobe/Novelina.git
+   ```
+
+2. **Masuk ke direktori proyek**
+   ```bash
+   cd Novelina
+   ```
+
+3. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+4. **Jalankan aplikasi**
+   ```bash
+   flutter run
+   ```
+
+### Menjalankan di Device Spesifik
+
+**Untuk Android:**
+```bash
+flutter run -d android
+```
+
+**Untuk iOS:**
+```bash
+flutter run -d ios
+```
+
+**Untuk Web:**
+```bash
+flutter run -d chrome
+```
