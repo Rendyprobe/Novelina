@@ -4,6 +4,7 @@ import '../../core/storage_helper.dart';
 import '../../models/novel_model.dart';
 import '../auth/sign_in_screen.dart';
 import 'novel_detail_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final List<Novel> _novels;
   String userName = '';
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -39,6 +41,52 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (context) => const SignInScreen()),
     );
   }
+
+void _onBottomNavTap(int index) {
+  setState(() {
+    _selectedIndex = index;
+  });
+
+  if (index == 3) {
+    // Navigate to Profile
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(),
+      ),
+    ).then((_) {
+      // Reset selection when returning
+      setState(() {
+        _selectedIndex = 0;
+      });
+    });
+  } else {
+    // Show coming soon for other tabs
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_getTabName(index)),
+        backgroundColor: AppColors.secondaryBlue,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+    // Reset to home
+    setState(() {
+      _selectedIndex = 0;
+    });
+  }
+}
+
+String _getTabName(int index) {
+  switch (index) {
+    case 1:
+      return 'Fitur Pencarian akan segera tersedia';
+    case 2:
+      return 'Fitur Bookmark akan segera tersedia';
+    default:
+      return '';
+  }
+}
+
 
   void _openNovelDetail(Novel novel) {
     Navigator.push(
@@ -120,6 +168,8 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedItemColor: Colors.white,
           unselectedItemColor: Colors.white60,
           type: BottomNavigationBarType.fixed,
+          currentIndex: _selectedIndex,
+          onTap: _onBottomNavTap,
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home),

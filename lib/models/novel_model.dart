@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 
 abstract class LiteratureItem {
   final String _id;
@@ -33,6 +33,7 @@ class Novel extends LiteratureItem {
   final String _genre;
   final String _content;
   final String _coverAsset;
+  double _userRating;
 
   Novel({
     required super.id,
@@ -44,19 +45,29 @@ class Novel extends LiteratureItem {
     required String genre,
     required String content,
     required String coverAsset,
+    double userRating = 0.0,
   })  : _rating = rating,
         _chapters = chapters,
         _genre = genre,
         _content = content,
-        _coverAsset = coverAsset;
+        _coverAsset = coverAsset,
+        _userRating = userRating;
 
   double get rating => _rating;
   int get chapters => _chapters;
   String get genre => _genre;
   String get content => _content;
   String get coverAsset => _coverAsset;
+  double get userRating => _userRating;
+  set userRating(double value) {
+    _userRating = value.clamp(0.0, 5.0).toDouble();
+  }
 
   String get formattedRating => _rating.toStringAsFixed(1);
+
+  void updateUserRating(double newRating) {
+    userRating = newRating;
+  }
 
   @override
   String marketingMessage() {

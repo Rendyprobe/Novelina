@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:getwidget/getwidget.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_constants.dart';
 import '../../core/storage_helper.dart';
@@ -19,6 +20,30 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+
+  static const Widget _loadingIndicator = Row(
+    mainAxisSize: MainAxisSize.min,
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: <Widget>[
+      SizedBox(
+        height: 20,
+        width: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          color: AppColors.primaryBlue,
+        ),
+      ),
+      SizedBox(width: 12),
+      Text(
+        'Memproses...',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: AppColors.primaryBlue,
+        ),
+      ),
+    ],
+  );
 
   static const TextStyle _fieldLabelStyle = TextStyle(color: Colors.black, fontWeight: FontWeight.w600);
 
@@ -211,20 +236,19 @@ class _SignInScreenState extends State<SignInScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 50,
-                      child: ElevatedButton(
+                      child: GFButton(
                         onPressed: _isLoading ? null : _signIn,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primaryBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 5,
+                        fullWidthButton: true,
+                        size: GFSize.LARGE,
+                        color: Colors.white,
+                        textColor: AppColors.primaryBlue,
+                        type: GFButtonType.solid,
+                        borderShape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
                         ),
+                        elevation: 5,
                         child: _isLoading
-                            ? const CircularProgressIndicator(
-                                color: AppColors.primaryBlue,
-                              )
+                            ? _loadingIndicator
                             : const Text(
                                 'Masuk',
                                 style: TextStyle(
@@ -288,7 +312,6 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 }
-
 
 
 
