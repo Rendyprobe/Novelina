@@ -1,9 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../core/app_colors.dart';
 import '../../models/novel_model.dart';
+import '../../services/rating_service.dart';
 import 'novel_reader_screen.dart';
 
-class NovelDetailScreen extends StatelessWidget {
+class NovelDetailScreen extends StatefulWidget {
   const NovelDetailScreen({
     super.key,
     required this.novel,
@@ -12,13 +14,54 @@ class NovelDetailScreen extends StatelessWidget {
   final Novel novel;
 
   @override
+  State<NovelDetailScreen> createState() => _NovelDetailScreenState();
+}
+
+class _NovelDetailScreenState extends State<NovelDetailScreen> {
+  double _userRating = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRating();
+  }
+
+  Future<void> _loadUserRating() async {
+    final rating = await RatingService.getRating(widget.novel.id);
+    setState(() {
+      _userRating = rating;
+      widget.novel.userRating = rating;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveRating(double rating) async {
+    await RatingService.saveRating(widget.novel.id, rating);
+    setState(() {
+      _userRating = rating;
+      widget.novel.userRating = rating;
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Rating ${rating.toStringAsFixed(1)} berhasil disimpan!'),
+          backgroundColor: AppColors.secondaryBlue,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isFeatured = novel is FeaturedNovel;
-    final featureTag = isFeatured ? (novel as FeaturedNovel).featureTag : null;
+    final isFeatured = widget.novel is FeaturedNovel;
+    final featureTag = isFeatured ? (widget.novel as FeaturedNovel).featureTag : null;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(novel.title),
+        title: Text(widget.novel.title),
         backgroundColor: AppColors.primaryBlue,
       ),
       body: Container(
@@ -54,7 +97,7 @@ class NovelDetailScreen extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(20),
                             child: Image.asset(
-                              novel.coverAsset,
+                              widget.novel.coverAsset,
                               width: 80,
                               height: 80,
                               fit: BoxFit.cover,
@@ -66,7 +109,7 @@ class NovelDetailScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  novel.title,
+                                  widget.novel.title,
                                   style: const TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
@@ -75,7 +118,7 @@ class NovelDetailScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Karya ${novel.author}',
+                                  'Karya ${widget.novel.author}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Colors.black54,
@@ -89,17 +132,17 @@ class NovelDetailScreen extends StatelessWidget {
                                   children: [
                                     _InfoChip(
                                       icon: Icons.star_rounded,
-                                      label: novel.formattedRating,
+                                      label: widget.novel.formattedRating,
                                       background: Colors.amber.withValues(alpha: 0.2),
                                       foreground: Colors.orange.shade800,
                                     ),
                                     _InfoChip(
                                       icon: Icons.menu_book_outlined,
-                                      label: '${novel.chapters} Bab',
+                                      label: '${widget.novel.chapters} Bab',
                                     ),
                                     _InfoChip(
                                       icon: Icons.category_outlined,
-                                      label: novel.genre,
+                                      label: widget.novel.genre,
                                     ),
                                     if (featureTag != null)
                                       _InfoChip(
@@ -117,7 +160,7 @@ class NovelDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        novel.synopsis,
+                        widget.novel.synopsis,
                         style: TextStyle(
                           fontSize: 15,
                           height: 1.7,
@@ -128,6 +171,80 @@ class NovelDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                
+                // Rating Widget Section
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.primaryBlue.withValues(alpha: 0.12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.08),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Berikan Rating Anda',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_isLoading)
+                        const CircularProgressIndicator(
+                          color: AppColors.primaryBlue,
+                        )
+                      else
+                        Column(
+                          children: [
+                            RatingBar.builder(
+                              initialRating: _userRating,
+                              minRating: 0,
+                              direction: Axis.horizontal,
+                              allowHalfRating: true,
+                              itemCount: 5,
+                              itemSize: 45,
+                              itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              itemBuilder: (context, _) => const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                              ),
+                              onRatingUpdate: (rating) {
+                                _saveRating(rating);
+                              },
+                              glow: true,
+                              glowColor: Colors.amber.withValues(alpha: 0.3),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _userRating > 0 
+                                ? 'Rating Anda: ${_userRating.toStringAsFixed(1)} ⭐'
+                                : 'Ketuk bintang untuk memberi rating',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -158,7 +275,7 @@ class NovelDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        novel.marketingMessage(),
+                        widget.novel.marketingMessage(),
                         style: TextStyle(
                           fontSize: 14,
                           height: 1.6,
@@ -185,7 +302,7 @@ class NovelDetailScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => NovelReaderScreen(novel: novel),
+                          builder: (context) => NovelReaderScreen(novel: widget.novel),
                         ),
                       );
                     },
