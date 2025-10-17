@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/cover_image_utils.dart';
@@ -7,7 +8,6 @@ import '../../models/novel_model.dart';
 import '../../viewmodels/home_view_model.dart';
 import '../../services/bookmark_service.dart';
 import '../admin/admin_upload_screen.dart';
-import '../auth/sign_in_screen.dart';
 import '../profile/profile_screen.dart';
 import 'novel_detail_screen.dart';
 
@@ -51,7 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refreshCatalog() async {
-    setState(() {});
+    setState(() {
+      _viewModel.isLoading = true;
+    });
     await _viewModel.loadCatalog();
     if (!mounted) return;
     setState(() {});
@@ -116,15 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _onSearchChanged('');
   }
 
-  Future<void> _logout() async {
-    await StorageHelper.clearUserData();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const SignInScreen()),
-    );
-  }
-
   String get _greetingText {
     if (_userName.trim().isEmpty) {
       return 'Halo, Novelina';
@@ -174,9 +167,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget homeChild;
+    if (_viewModel.isLoading) {
+      homeChild = _buildLoadingState();
+    } else if (_viewModel.isSearching) {
+      homeChild = _buildSearchResult();
+    } else {
+      homeChild = _buildHomeBody();
+    }
+
     final homeContent = AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
-      child: _viewModel.isSearching ? _buildSearchResult() : _buildHomeBody(),
+      child: homeChild,
     );
 
     return Scaffold(
@@ -250,11 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           }
                         },
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      tooltip: 'Keluar',
-                      onPressed: _logout,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -304,13 +301,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final genres = _viewModel.genres;
 
     return ListView(
+      key: const ValueKey('home-content'),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
-        if (_viewModel.isLoading)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: LinearProgressIndicator(color: AppColors.primaryBlue),
-          ),
         if (featured.isNotEmpty) ...[
           const _SectionTitle('Pilihan Editor'),
           const SizedBox(height: 12),
@@ -355,6 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (results.isEmpty) {
       return ListView(
+        key: const ValueKey('search-empty'),
         padding: const EdgeInsets.all(32),
         children: const [
           SizedBox(height: 80),
@@ -374,6 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return ListView.separated(
+      key: const ValueKey('search-results'),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       itemCount: results.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -478,6 +473,44 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return ListView(
+      key: const ValueKey('loading-state'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 140),
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LoadingAnimationWidget.staggeredDotsWave(
+              color: AppColors.primaryBlue,
+              size: 60,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Memuat katalog novel...',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryBlue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Mohon tunggu sebentar.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -847,3 +880,5 @@ class _BookmarkPlaceholder extends StatelessWidget {
     );
   }
 }
+
+

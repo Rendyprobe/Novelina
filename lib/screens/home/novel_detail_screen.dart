@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../core/app_colors.dart';
 import '../../core/cover_image_utils.dart';
@@ -6,6 +6,7 @@ import '../../core/storage_helper.dart';
 import '../../models/novel_model.dart';
 import '../../services/bookmark_service.dart';
 import '../../services/rating_service.dart';
+import '../../services/novel_catalog_service.dart';
 import 'novel_reader_screen.dart';
 
 class NovelDetailScreen extends StatefulWidget {
@@ -28,6 +29,8 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
   bool _bookmarkBusy = false;
   bool _bookmarkChanged = false;
   final BookmarkService _bookmarkService = const BookmarkService();
+  final NovelCatalogService _catalogService = const NovelCatalogService();
+  String? _userRole;
 
   @override
   void initState() {
@@ -48,7 +51,12 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
 
   Future<void> _loadBookmarkStatus() async {
     final userId = await StorageHelper.getUserId();
+    final role = await StorageHelper.getUserRole();
     if (!mounted) return;
+
+    setState(() {
+      _userRole = role;
+    });
 
     if (userId <= 0) {
       setState(() => _bookmarkReady = true);
@@ -213,7 +221,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      _buildBookmarkIcon(color: AppColors.primaryBlue),
+                                      _buildActionButtons(),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
@@ -425,6 +433,92 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
     );
   }
 
+  Widget _buildActionButtons() {
+    final isAdmin = (_userRole ?? '').toLowerCase() == 'admin';
+    final buttons = <Widget>[
+      _buildBookmarkIcon(),
+    ];
+
+    if (isAdmin) {
+      buttons.addAll([
+        const SizedBox(width: 12),
+        _buildDeleteButton(),
+      ]);
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: buttons,
+    );
+  }
+
+  Future<void> _confirmDelete() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Hapus Novel'),
+          content: Text(
+            'Yakin ingin menghapus "${widget.novel.title}"? Semua bab, komentar, dan statistik akan hilang.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    final userId = await StorageHelper.getUserId();
+    if (!mounted) return;
+
+    if (userId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sesi admin tidak ditemukan. Silakan masuk kembali.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _bookmarkBusy = true);
+
+    try {
+      await _catalogService.deleteNovel(userId: userId, novelId: widget.novel.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Novel berhasil dihapus.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus novel: '),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _bookmarkBusy = false);
+      }
+    }
+  }
   Widget _buildBookmarkIcon({Color color = AppColors.primaryBlue}) {
     if (!_bookmarkReady || _bookmarkBusy) {
       return const SizedBox(
@@ -448,6 +542,14 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
           color: color,
         ),
       ),
+    );
+  }
+
+  Widget _buildDeleteButton() {
+    return IconButton(
+      icon: const Icon(Icons.delete_outline, color: Colors.white),
+      tooltip: 'Hapus novel ini',
+      onPressed: _bookmarkBusy ? null : _confirmDelete,
     );
   }
 
@@ -541,3 +643,15 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
