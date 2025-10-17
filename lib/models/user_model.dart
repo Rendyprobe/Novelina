@@ -1,33 +1,47 @@
 class UserModel {
+  final int id;
   final String email;
   final String name;
-  final String password;
+  final String role;
 
-  UserModel({
+  const UserModel({
+    required this.id,
     required this.email,
     required this.name,
-    required this.password,
+    required this.role,
   });
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'email': email,
       'name': name,
-      'password': password,
+      'role': role,
     };
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      email: json['email'],
-      name: json['name'],
-      password: json['password'],
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      email: (json['email'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      role: (json['role'] as String?)?.toLowerCase() ?? 'user',
     );
   }
 
   static String getNameFromEmail(String email) {
     if (email.isEmpty) return '';
-    String name = email.split('@')[0];
-    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+
+    final parts = email.split('@');
+    if (parts.isEmpty || parts.first.isEmpty) {
+      return '';
+    }
+
+    final localPart = parts.first;
+    if (localPart.length == 1) {
+      return localPart.toUpperCase();
+    }
+
+    return '';
   }
 }

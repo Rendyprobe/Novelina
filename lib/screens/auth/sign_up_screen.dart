@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_constants.dart';
-import '../../core/storage_helper.dart';
+import '../../services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,6 +17,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService.instance;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
@@ -31,31 +33,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _signUp() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Simulasi proses registrasi
-      await Future.delayed(const Duration(seconds: 1));
-
-      String email = _emailController.text.trim();
-      String name = _nameController.text.trim();
-
-      await StorageHelper.setLoginStatus(false);
-      await StorageHelper.setUserData(email, name);
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.pop(context, true);
+  Future<void> _signUp() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _authService.signUp(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on AuthException catch (error) {
+      _showSnackBar(error.message);
+    } catch (_) {
+      _showSnackBar('Pendaftaran gagal. Periksa koneksi dan coba lagi.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showSnackBar(String message, {Color backgroundColor = Colors.redAccent}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: backgroundColor),
+    );
   }
 
   @override
@@ -74,7 +83,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo
                     Container(
                       width: 100,
                       height: 100,
@@ -98,8 +106,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-
-                    // Title
                     const Text(
                       'Daftar',
                       style: TextStyle(
@@ -109,8 +115,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-
-                    // Name Field
                     _buildTextField(
                       controller: _nameController,
                       label: 'Nama',
@@ -123,8 +127,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Email Field
                     _buildTextField(
                       controller: _emailController,
                       label: 'Email',
@@ -141,8 +143,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Password Field
                     _buildTextField(
                       controller: _passwordController,
                       label: 'Password',
@@ -170,8 +170,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Confirm Password Field
                     _buildTextField(
                       controller: _confirmPasswordController,
                       label: 'Konfirmasi Password',
@@ -199,8 +197,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       },
                     ),
                     const SizedBox(height: 30),
-
-                    // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -215,9 +211,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           elevation: 5,
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(
-                                color: AppColors.primaryBlue,
-                              )
+                            ? const CircularProgressIndicator(color: AppColors.primaryBlue)
                             : const Text(
                                 'Daftar',
                                 style: TextStyle(
@@ -228,8 +222,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Back to Sign In
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -238,9 +230,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           style: TextStyle(color: Colors.white70),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
+                          onTap: () => Navigator.pop(context),
                           child: const Text(
                             'Masuk',
                             style: TextStyle(
@@ -304,12 +294,3 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-
-

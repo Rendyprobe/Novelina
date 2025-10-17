@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:getwidget/getwidget.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_constants.dart';
 import '../../core/storage_helper.dart';
 import '../../models/user_model.dart';
+import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
+import '../admin/admin_upload_screen.dart';
 import 'sign_up_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -18,6 +21,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService.instance;
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
@@ -54,39 +58,63 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  void _signIn() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+  Future<void> _signIn() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      // Simulasi proses login
-      await Future.delayed(const Duration(seconds: 1));
+    setState(() => _isLoading = true);
 
-      String email = _emailController.text.trim();
-      String name = UserModel.getNameFromEmail(email);
+    try {
+      final UserModel user = await _authService.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
       await StorageHelper.setLoginStatus(true);
-      await StorageHelper.setUserData(email, name);
+      await StorageHelper.setUserData(
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      );
 
-      setState(() {
-        _isLoading = false;
-      });
+      if (!mounted) return;
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppConstants.loginSuccessMessage),
-            backgroundColor: AppColors.secondaryBlue,
-          ),
-        );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(AppConstants.loginSuccessMessage),
+          backgroundColor: AppColors.secondaryBlue,
+        ),
+      );
 
+      if (user.role == 'admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const AdminUploadScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
+    } on AuthException catch (error) {
+      _showSnackBar(error.message);
+    } catch (_) {
+      _showSnackBar('Login gagal. Periksa koneksi dan coba lagi.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  void _showSnackBar(String message, {Color backgroundColor = Colors.redAccent}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: backgroundColor),
+    );
   }
 
   @override
@@ -105,7 +133,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo
                     Container(
                       width: 100,
                       height: 100,
@@ -129,8 +156,6 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-
-                    // Title
                     const Text(
                       'Masuk',
                       style: TextStyle(
@@ -140,99 +165,49 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-
-                    // Email Field
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          labelStyle: _fieldLabelStyle,
-                          prefixIcon: Icon(Icons.email, color: AppColors.primaryBlue),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(15)),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.transparent,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Email tidak boleh kosong';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Format email tidak valid';
-                          }
-                          return null;
-                        },
-                      ),
+                    _buildTextField(
+                      controller: _emailController,
+                      label: 'Email',
+                      icon: Icons.email,
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Email tidak boleh kosong';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Format email tidak valid';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
-
-                    // Password Field
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: _fieldLabelStyle,
-                          prefixIcon: const Icon(Icons.lock, color: AppColors.primaryBlue),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                              color: AppColors.primaryBlue,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
-                          ),
-                          border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(15)),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.transparent,
+                    _buildTextField(
+                      controller: _passwordController,
+                      label: 'Password',
+                      icon: Icons.lock,
+                      obscureText: !_isPasswordVisible,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          color: AppColors.primaryBlue,
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Password tidak boleh kosong';
-                          }
-                          if (value.length < 6) {
-                            return 'Password minimal 6 karakter';
-                          }
-                          return null;
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
                         },
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Password tidak boleh kosong';
+                        }
+                        if (value.length < 6) {
+                          return 'Password minimal 6 karakter';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 30),
-
-                    // Sign In Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -259,8 +234,6 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Sign Up Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -269,27 +242,11 @@ class _SignInScreenState extends State<SignInScreen> {
                           style: TextStyle(color: Colors.white70),
                         ),
                         GestureDetector(
-                          onTap: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final result = await Navigator.push<bool>(
+                          onTap: () {
+                            Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignUpScreen(),
-                              ),
+                              MaterialPageRoute(builder: (context) => const SignUpScreen()),
                             );
-
-                            if (result == true) {
-                              if (!mounted) {
-                                return;
-                              }
-
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(AppConstants.registerSuccessMessage),
-                                  backgroundColor: AppColors.secondaryBlue,
-                                ),
-                              );
-                            }
                           },
                           child: const Text(
                             'Daftar',
@@ -311,10 +268,46 @@ class _SignInScreenState extends State<SignInScreen> {
       ),
     );
   }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: _fieldLabelStyle,
+          prefixIcon: Icon(icon, color: AppColors.primaryBlue),
+          suffixIcon: suffixIcon,
+          border: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(15)),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.transparent,
+        ),
+        validator: validator,
+      ),
+    );
+  }
 }
-
-
-
-
-
-

@@ -22,7 +22,7 @@ abstract class LiteratureItem {
   String get synopsis => _synopsis;
 
   @protected
-  String get baseMarketingMessage => '$title karya $author';
+  String get baseMarketingMessage => ' karya ';
 
   String marketingMessage();
 }
@@ -33,6 +33,7 @@ class Novel extends LiteratureItem {
   final String _genre;
   final String _content;
   final String _coverAsset;
+  final String? _marketingOverride;
   double _userRating;
 
   Novel({
@@ -45,12 +46,14 @@ class Novel extends LiteratureItem {
     required String genre,
     required String content,
     required String coverAsset,
+    String? marketingMessageOverride,
     double userRating = 0.0,
   })  : _rating = rating,
         _chapters = chapters,
         _genre = genre,
         _content = content,
         _coverAsset = coverAsset,
+        _marketingOverride = marketingMessageOverride,
         _userRating = userRating;
 
   double get rating => _rating;
@@ -71,7 +74,74 @@ class Novel extends LiteratureItem {
 
   @override
   String marketingMessage() {
-    return '${baseMarketingMessage.toUpperCase()} - $_genre';
+    final override = _marketingOverride?.trim();
+    if (override != null && override.isNotEmpty) {
+      return override;
+    }
+    return ' - ';
+  }
+
+  factory Novel.fromJson(Map<String, dynamic> json) {
+    String asString(dynamic value, [String fallback = '']) =>
+        value is String ? value : value?.toString() ?? fallback;
+    double asDouble(dynamic value, [double fallback = 0]) {
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? fallback;
+      return fallback;
+    }
+
+    int asInt(dynamic value, [int fallback = 0]) {
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? fallback;
+      return fallback;
+    }
+
+    final featureTag = asString(json['feature_tag']).trim();
+    final marketing = asString(json['marketing_message']).trim();
+
+    final baseParams = (
+      id: asString(json['id']),
+      title: asString(json['title']),
+      author: asString(json['author']),
+      synopsis: asString(json['synopsis']),
+      rating: asDouble(json['rating']),
+      chapters: asInt(json['chapters']),
+      genre: asString(json['genre']),
+      content: asString(json['content']),
+      cover: asString(json['cover_asset']).isEmpty
+          ? 'assets/images/Logo_Novelina.jpg'
+          : asString(json['cover_asset']),
+      marketingOverride: marketing.isEmpty ? null : marketing,
+    );
+
+    if (featureTag.isNotEmpty) {
+      return FeaturedNovel(
+        featureTag: featureTag,
+        id: baseParams.id,
+        title: baseParams.title,
+        author: baseParams.author,
+        synopsis: baseParams.synopsis,
+        rating: baseParams.rating,
+        chapters: baseParams.chapters,
+        genre: baseParams.genre,
+        content: baseParams.content,
+        coverAsset: baseParams.cover,
+        marketingMessageOverride: baseParams.marketingOverride,
+      );
+    }
+
+    return Novel(
+      id: baseParams.id,
+      title: baseParams.title,
+      author: baseParams.author,
+      synopsis: baseParams.synopsis,
+      rating: baseParams.rating,
+      chapters: baseParams.chapters,
+      genre: baseParams.genre,
+      content: baseParams.content,
+      coverAsset: baseParams.cover,
+      marketingMessageOverride: baseParams.marketingOverride,
+    );
   }
 }
 
@@ -88,6 +158,7 @@ class FeaturedNovel extends Novel {
     required super.genre,
     required super.content,
     required super.coverAsset,
+    super.marketingMessageOverride,
     String featureTag = 'Pilihan Editor',
   }) : _featureTag = featureTag;
 
@@ -95,7 +166,10 @@ class FeaturedNovel extends Novel {
 
   @override
   String marketingMessage() {
-    return '$featureTag - Rating ${rating.toStringAsFixed(1)}';
+    if (super.marketingMessage() != ' - ') {
+      return super.marketingMessage();
+    }
+    return ' - Rating ';
   }
 }
 
@@ -108,8 +182,7 @@ class NovelRepository {
         id: 'novel-1',
         title: 'Laskar Pelangi',
         author: 'Andrea Hirata',
-        synopsis:
-            'Kisah perjuangan sepuluh anak di Belitung dalam mengejar mimpi dan pendidikan.',
+        synopsis: 'Kisah perjuangan sepuluh anak di Belitung dalam mengejar mimpi dan pendidikan.',
         rating: 4.8,
         chapters: 18,
         genre: 'Drama Inspiratif',
@@ -124,8 +197,7 @@ class NovelRepository {
         id: 'novel-2',
         title: 'Ayat-Ayat Cinta',
         author: 'Habiburrahman El Shirazy',
-        synopsis:
-            'Drama romansa yang berlatar di Mesir dengan dilema cinta dan spiritualitas.',
+        synopsis: 'Drama romansa yang berlatar di Mesir dengan dilema cinta dan spiritualitas.',
         rating: 4.7,
         chapters: 24,
         genre: 'Romansa Religi',
@@ -139,8 +211,7 @@ class NovelRepository {
         id: 'novel-3',
         title: 'Perahu Kertas',
         author: 'Dee Lestari',
-        synopsis:
-            'Perjalanan Kugy dan Keenan dengan impian kreatif dan pencarian jati diri.',
+        synopsis: 'Perjalanan Kugy dan Keenan dengan impian kreatif dan pencarian jati diri.',
         rating: 4.6,
         chapters: 30,
         genre: 'Fiksi Kontemporer',
@@ -169,8 +240,7 @@ class NovelRepository {
         id: 'novel-5',
         title: 'Sang Pemimpi',
         author: 'Andrea Hirata',
-        synopsis:
-            'Petualangan Ikal dan Arai mengejar pendidikan tinggi dan mimpi besar.',
+        synopsis: 'Petualangan Ikal dan Arai mengejar pendidikan tinggi dan mimpi besar.',
         rating: 4.5,
         chapters: 20,
         genre: 'Drama Inspiratif',
@@ -184,8 +254,7 @@ class NovelRepository {
         id: 'novel-6',
         title: 'Tetralogi Buru',
         author: 'Pramoedya Ananta Toer',
-        synopsis:
-            'Serangkaian novel sejarah tentang perjuangan Minke melawan kolonialisme.',
+        synopsis: 'Serangkaian novel sejarah tentang perjuangan Minke melawan kolonialisme.',
         rating: 4.8,
         chapters: 40,
         genre: 'Sejarah',
@@ -202,7 +271,7 @@ class NovelRepository {
     final buffer = StringBuffer();
     for (var i = 1; i <= 8; i++) {
       buffer.writeln(
-        '$title menuturkan $focus melalui kalimat ke-$i yang memperdalam pengalaman membaca.',
+        ' menuturkan  melalui kalimat ke- yang memperdalam pengalaman membaca.',
       );
     }
     return buffer.toString().trim();

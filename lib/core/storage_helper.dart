@@ -2,8 +2,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageHelper {
   static const String _keyIsLoggedIn = 'is_logged_in';
+  static const String _keyUserId = 'user_id';
   static const String _keyUserEmail = 'user_email';
   static const String _keyUserName = 'user_name';
+  static const String _keyUserRole = 'user_role';
 
   static Future<void> setLoginStatus(bool isLoggedIn) async {
     final prefs = await SharedPreferences.getInstance();
@@ -15,10 +17,22 @@ class StorageHelper {
     return prefs.getBool(_keyIsLoggedIn) ?? false;
   }
 
-  static Future<void> setUserData(String email, String name) async {
+  static Future<void> setUserData({
+    required int id,
+    required String email,
+    required String name,
+    required String role,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyUserId, id);
     await prefs.setString(_keyUserEmail, email);
     await prefs.setString(_keyUserName, name);
+    await prefs.setString(_keyUserRole, role);
+  }
+
+  static Future<int> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyUserId) ?? 0;
   }
 
   static Future<String> getUserEmail() async {
@@ -29,6 +43,11 @@ class StorageHelper {
   static Future<String> getUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUserName) ?? '';
+  }
+
+  static Future<String> getUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserRole) ?? 'user';
   }
 
   static Future<void> clearUserData() async {
