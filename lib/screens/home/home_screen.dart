@@ -7,22 +7,28 @@ import '../../core/storage_helper.dart';
 import '../../models/novel_model.dart';
 import '../../viewmodels/home_view_model.dart';
 import '../../services/bookmark_service.dart';
+import '../../services/novel_catalog_service.dart';
 import '../admin/admin_upload_screen.dart';
 import '../profile/profile_screen.dart';
 import 'novel_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.openAdminUploadOnInit = false});
+
+  final bool openAdminUploadOnInit;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const int _novelsPerPage = 10;
+
   late final HomeViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final BookmarkService _bookmarkService = const BookmarkService();
+  final NovelCatalogService _catalogService = const NovelCatalogService();
 
   String _userName = '';
   String _userRole = 'user';
@@ -31,6 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _bookmarkRequiresLogin = false;
   String? _bookmarkError;
   List<Novel> _bookmarkedNovels = [];
+  bool _didScheduleInitialAdminUpload = false;
+  String? _deletingNovelId;
+  int _currentPage = 0;
 
   @override
   void initState() {
@@ -47,6 +56,16 @@ class _HomeScreenState extends State<HomeScreen> {
       _userName = name;
       _userRole = role;
     });
+    if (widget.openAdminUploadOnInit &&
+        !_didScheduleInitialAdminUpload &&
+        role == 'admin') {
+      _didScheduleInitialAdminUpload = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _openAdminPanel();
+        }
+      });
+    }
     await _refreshCatalog();
   }
 
@@ -56,7 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     await _viewModel.loadCatalog();
     if (!mounted) return;
-    setState(() {});
+    setState(() {
+      _currentPage = 0;
+    });
   }
 
   Future<void> _loadBookmarks() async {
@@ -110,12 +131,45 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onSearchChanged(String value) {
     setState(() {
       _viewModel.updateSearch(value);
+      _currentPage = 0;
     });
   }
 
   void _clearSearch() {
     _searchController.clear();
     _onSearchChanged('');
+  }
+
+  void _applyGenreFilter(String genre) {
+    _viewModel.applyGenreFilter(genre);
+    setState(() {
+      _currentPage = 0;
+    });
+  }
+
+  void _clearGenreFilter() {
+    if (_viewModel.activeGenre == null) return;
+    _viewModel.applyGenreFilter(null);
+    setState(() {
+      _currentPage = 0;
+    });
+  }
+
+  void _setPage(int page) {
+    if (page == _currentPage) return;
+    setState(() {
+      _currentPage = page;
+    });
+  }
+
+  Future<void> _openAdminPanel() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminUploadScreen()),
+    );
+    if (result == true) {
+      await _refreshCatalog();
+    }
   }
 
   String get _greetingText {
@@ -129,15 +183,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onBottomNavTap(int index) {
     if (index == 2) {
-      setState(() => _selectedIndex = index);
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-      ).then((_) {
-        if (mounted) {
-          setState(() => _selectedIndex = 0);
-        }
-      });
+      if (_selectedIndex != 2) {
+        setState(() => _selectedIndex = 2);
+      }
       return;
     }
 
@@ -165,6 +213,89 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _handleDelete(Novel novel) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Hapus Novel'),
+          content: Text(
+            'Hapus "${novel.title}" dari katalog? Semua bab, statistik, dan bookmark akan hilang.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    final userId = await StorageHelper.getUserId();
+    if (!mounted) return;
+
+    if (userId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sesi admin tidak ditemukan. Silakan masuk kembali.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _deletingNovelId = novel.id);
+
+    try {
+      await _catalogService.deleteNovel(userId: userId, novelId: novel.id);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Novel berhasil dihapus.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+
+      setState(() {
+        _bookmarkedNovels.removeWhere((item) => item.id == novel.id);
+      });
+
+      await _refreshCatalog();
+      if (mounted && _selectedIndex == 1) {
+        await _loadBookmarks();
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final rawMessage = error.toString();
+      final message = rawMessage.startsWith('Exception: ')
+          ? rawMessage.substring(11)
+          : rawMessage;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus novel: $message'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingNovelId = null);
+      } else {
+        _deletingNovelId = null;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Widget homeChild;
@@ -181,33 +312,44 @@ class _HomeScreenState extends State<HomeScreen> {
       child: homeChild,
     );
 
+    final isProfileTab = _selectedIndex == 2;
+
+    Widget bodyContent;
+    PreferredSizeWidget? appBar;
+    if (isProfileTab) {
+      bodyContent = const ProfileView();
+      appBar = null;
+    } else if (_selectedIndex == 1) {
+      bodyContent = RefreshIndicator(
+        onRefresh: _loadBookmarks,
+        child: _buildBookmarkBody(),
+      );
+      appBar = _buildAppBar();
+    } else {
+      bodyContent = RefreshIndicator(
+        onRefresh: _refreshCatalog,
+        child: homeContent,
+      );
+      appBar = _buildAppBar();
+    }
+
     return Scaffold(
       backgroundColor: AppColors.lightBlue,
-      appBar: _buildAppBar(),
+      appBar: appBar,
       bottomNavigationBar: _buildBottomNavigation(),
-      body: _selectedIndex == 1
-          ? RefreshIndicator(
-              onRefresh: _loadBookmarks,
-              child: _buildBookmarkBody(),
-            )
-          : RefreshIndicator(
-              onRefresh: _refreshCatalog,
-              child: homeContent,
-            ),
+      body: bodyContent,
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(160),
+      preferredSize: const Size.fromHeight(140),
       child: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.primaryGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -240,22 +382,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     if (_userRole == 'admin')
                       IconButton(
-                        icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                        icon: const Icon(
+                          Icons.admin_panel_settings,
+                          color: Colors.white,
+                        ),
                         tooltip: 'Panel Admin',
-                        onPressed: () async {
-                          final result = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(builder: (_) => const AdminUploadScreen()),
-                          );
-                          if (result == true) {
-                            await _refreshCatalog();
-                          }
-                        },
+                        onPressed: _openAdminPanel,
                       ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 Container(
+                  height: 48,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -271,18 +409,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     focusNode: _searchFocusNode,
                     controller: _searchController,
                     onChanged: _onSearchChanged,
+                    textAlignVertical: TextAlignVertical.center,
                     decoration: InputDecoration(
                       hintText: 'Cari judul, penulis, atau genre...',
-                      prefixIcon: const Icon(Icons.search, color: AppColors.primaryBlue),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AppColors.primaryBlue,
+                      ),
                       suffixIcon: _viewModel.isSearching
                           ? IconButton(
-                              icon: const Icon(Icons.close, color: AppColors.primaryBlue),
+                              icon: const Icon(
+                                Icons.close,
+                                color: AppColors.primaryBlue,
+                              ),
                               onPressed: _clearSearch,
                               tooltip: 'Bersihkan pencarian',
                             )
                           : null,
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 0,
+                        horizontal: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -299,6 +448,30 @@ class _HomeScreenState extends State<HomeScreen> {
     final popular = _viewModel.visibleNovels.toList()
       ..sort((a, b) => b.rating.compareTo(a.rating));
     final genres = _viewModel.genres;
+    final isAdmin = _userRole.toLowerCase() == 'admin';
+    final hasDeletionInProgress = _deletingNovelId != null;
+
+    final totalPages = (popular.length / _novelsPerPage).ceil();
+    int currentPage;
+    if (totalPages == 0) {
+      currentPage = 0;
+    } else {
+      currentPage = _currentPage.clamp(0, totalPages - 1);
+    }
+
+    if (currentPage != _currentPage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _currentPage = currentPage);
+        }
+      });
+    }
+
+    final startIndex = currentPage * _novelsPerPage;
+    final pageItems = popular
+        .skip(startIndex)
+        .take(_novelsPerPage)
+        .toList(growable: false);
 
     return ListView(
       key: const ValueKey('home-content'),
@@ -328,23 +501,36 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           )
-        else
-          ...popular.map(
-            (novel) => Padding(
+        else ...[
+          for (final novel in pageItems)
+            Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: _NovelListTile(
                 novel: novel,
                 onTap: () => _openNovelDetail(novel),
                 featureTag: novel is FeaturedNovel ? novel.featureTag : null,
+                showAdminControls: isAdmin,
+                isDeleting: novel.id == _deletingNovelId,
+                onDelete:
+                    isAdmin &&
+                        (!hasDeletionInProgress || novel.id == _deletingNovelId)
+                    ? () => _handleDelete(novel)
+                    : null,
               ),
             ),
-          ),
+          if (totalPages > 1) ...[
+            const SizedBox(height: 8),
+            _buildPaginationControls(totalPages, currentPage),
+          ],
+        ],
       ],
     );
   }
 
   Widget _buildSearchResult() {
     final results = _viewModel.visibleNovels;
+    final isAdmin = _userRole.toLowerCase() == 'admin';
+    final hasDeletionInProgress = _deletingNovelId != null;
 
     if (results.isEmpty) {
       return ListView(
@@ -367,19 +553,53 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return ListView.separated(
+    final totalPages = (results.length / _novelsPerPage).ceil();
+    int currentPage;
+    if (totalPages == 0) {
+      currentPage = 0;
+    } else {
+      currentPage = _currentPage.clamp(0, totalPages - 1);
+    }
+
+    if (currentPage != _currentPage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _currentPage = currentPage);
+        }
+      });
+    }
+
+    final startIndex = currentPage * _novelsPerPage;
+    final pageItems = results
+        .skip(startIndex)
+        .take(_novelsPerPage)
+        .toList(growable: false);
+
+    return ListView(
       key: const ValueKey('search-results'),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final novel = results[index];
-        return _NovelListTile(
-          novel: novel,
-          onTap: () => _openNovelDetail(novel),
-          featureTag: novel is FeaturedNovel ? novel.featureTag : null,
-        );
-      },
+      children: [
+        for (final novel in pageItems)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _NovelListTile(
+              novel: novel,
+              onTap: () => _openNovelDetail(novel),
+              featureTag: novel is FeaturedNovel ? novel.featureTag : null,
+              showAdminControls: isAdmin,
+              isDeleting: novel.id == _deletingNovelId,
+              onDelete:
+                  isAdmin &&
+                      (!hasDeletionInProgress || novel.id == _deletingNovelId)
+                  ? () => _handleDelete(novel)
+                  : null,
+            ),
+          ),
+        if (totalPages > 1) ...[
+          const SizedBox(height: 8),
+          _buildPaginationControls(totalPages, currentPage),
+        ],
+      ],
     );
   }
 
@@ -396,7 +616,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               margin: const EdgeInsets.only(right: 16),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
                 image: DecorationImage(
                   image: resolveCoverImage(novel.coverAsset),
                   fit: BoxFit.cover,
@@ -411,7 +630,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -503,10 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               'Mohon tunggu sebentar.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
           ],
         ),
@@ -551,9 +766,13 @@ class _HomeScreenState extends State<HomeScreen> {
       return const _BookmarkPlaceholder(
         icon: Icons.bookmark_border,
         title: 'Belum ada bookmark',
-        message: 'Ketuk ikon bookmark di halaman detail untuk menyimpan novel favoritmu.',
+        message:
+            'Ketuk ikon bookmark di halaman detail untuk menyimpan novel favoritmu.',
       );
     }
+
+    final isAdmin = _userRole.toLowerCase() == 'admin';
+    final hasDeletionInProgress = _deletingNovelId != null;
 
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -566,29 +785,126 @@ class _HomeScreenState extends State<HomeScreen> {
           novel: novel,
           onTap: () => _openNovelDetail(novel),
           featureTag: novel is FeaturedNovel ? novel.featureTag : null,
+          showAdminControls: isAdmin,
+          isDeleting: novel.id == _deletingNovelId,
+          onDelete:
+              isAdmin &&
+                  (!hasDeletionInProgress || novel.id == _deletingNovelId)
+              ? () => _handleDelete(novel)
+              : null,
         );
       },
     );
   }
 
   Widget _buildGenreWrap(List<String> genres) {
+    final activeGenreLower = (_viewModel.activeGenre ?? '').toLowerCase();
+
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: genres
-          .map(
-            (genre) => Chip(
-              label: Text(genre),
-              backgroundColor: Colors.white,
-              labelStyle: const TextStyle(
-                color: AppColors.primaryBlue,
-                fontWeight: FontWeight.w600,
+      spacing: 6,
+      runSpacing: 8,
+      children: genres.map((genre) {
+        final isSelected =
+            activeGenreLower.isNotEmpty &&
+            genre.toLowerCase() == activeGenreLower;
+
+        final borderColor = isSelected
+            ? AppColors.primaryBlue
+            : AppColors.primaryBlue.withValues(alpha: 0.6);
+        final backgroundColor = isSelected
+            ? AppColors.primaryBlue
+            : Colors.white;
+        final textColor = isSelected ? Colors.white : AppColors.primaryBlue;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              if (isSelected) {
+                _clearGenreFilter();
+              } else {
+                _applyGenreFilter(genre);
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primaryBlue.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : [],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              side: const BorderSide(color: AppColors.primaryBlue),
+              child: Text(
+                genre,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+              ),
             ),
-          )
-          .toList(),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPaginationControls(int totalPages, int currentPage) {
+    if (totalPages <= 1) {
+      return const SizedBox.shrink();
+    }
+
+    final pageButtons = List<Widget>.generate(totalPages, (index) {
+      final isActive = index == currentPage;
+      return OutlinedButton(
+        onPressed: () => _setPage(index),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(40, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          backgroundColor: Colors.white,
+          foregroundColor: isActive ? AppColors.primaryBlue : Colors.black87,
+          side: BorderSide(
+            color: isActive ? AppColors.secondaryBlue : Colors.grey.shade400,
+            width: isActive ? 2 : 1,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text('${index + 1}'),
+      );
+    });
+
+    pageButtons.add(
+      FilledButton(
+        onPressed: currentPage < totalPages - 1
+            ? () => _setPage(currentPage + 1)
+            : null,
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.redAccent,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Text('Selanjutnya →'),
+      ),
+    );
+
+    return Center(
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: pageButtons,
+      ),
     );
   }
 
@@ -599,9 +915,18 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedItemColor: AppColors.primaryBlue,
       unselectedItemColor: Colors.grey.shade500,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Beranda'),
-        BottomNavigationBarItem(icon: Icon(Icons.bookmark_border), label: 'Bookmark'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_rounded),
+          label: 'Beranda',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.bookmark_border),
+          label: 'Bookmark',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          label: 'Profil',
+        ),
       ],
     );
   }
@@ -630,31 +955,38 @@ class _NovelListTile extends StatelessWidget {
     required this.novel,
     required this.onTap,
     this.featureTag,
+    this.showAdminControls = false,
+    this.isDeleting = false,
+    this.onDelete,
   });
 
   final Novel novel;
   final VoidCallback onTap;
   final String? featureTag;
+  final bool showAdminControls;
+  final bool isDeleting;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
+    final deleteIconColor = onDelete == null
+        ? Colors.redAccent.withValues(alpha: 0.35)
+        : Colors.redAccent;
+
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.08),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.zero,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: _CoverImage(path: novel.coverAsset),
-              ),
+              ClipRect(child: _CoverImage(path: novel.coverAsset)),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -683,7 +1015,9 @@ class _NovelListTile extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryBlue.withValues(alpha: 0.12),
+                              color: AppColors.primaryBlue.withValues(
+                                alpha: 0.12,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -695,6 +1029,34 @@ class _NovelListTile extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ],
+                        if (showAdminControls) ...[
+                          const SizedBox(width: 6),
+                          if (isDeleting)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.redAccent,
+                              ),
+                            )
+                          else
+                            IconButton(
+                              onPressed: onDelete,
+                              tooltip: 'Hapus novel',
+                              padding: EdgeInsets.zero,
+                              splashRadius: 18,
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                              icon: Icon(
+                                Icons.delete_outline,
+                                color: deleteIconColor,
+                                size: 20,
+                              ),
+                            ),
                         ],
                       ],
                     ),
@@ -863,7 +1225,10 @@ class _BookmarkPlaceholder extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -880,5 +1245,3 @@ class _BookmarkPlaceholder extends StatelessWidget {
     );
   }
 }
-
-

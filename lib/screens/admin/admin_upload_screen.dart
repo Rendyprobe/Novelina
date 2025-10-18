@@ -1,11 +1,11 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:universal_html/html.dart' as html;
 
 import '../../core/app_colors.dart';
+import '../../core/cover_image_utils.dart';
 import '../../core/storage_helper.dart';
+import '../../services/image_upload_service.dart';
 import '../../services/novel_catalog_service.dart';
 
 class AdminUploadScreen extends StatefulWidget {
@@ -16,6 +16,23 @@ class AdminUploadScreen extends StatefulWidget {
 }
 
 class _AdminUploadScreenState extends State<AdminUploadScreen> {
+  static const String _customGenreLabel = 'Lainnya (isi manual)';
+  static const List<String> _genreOptions = [
+    'Romansa',
+    'Fantasi',
+    'Misteri',
+    'Horor',
+    'Fiksi Ilmiah',
+    'Drama',
+    'Petualangan',
+    'Komedi',
+    'Historis',
+    'Thriller',
+    'Inspiratif',
+    'Slice of Life',
+    _customGenreLabel,
+  ];
+
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _authorController = TextEditingController();
@@ -25,11 +42,10 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
   final _marketingController = TextEditingController();
   final _featureTagController = TextEditingController();
 
-  final List<_ChapterFormData> _chapters = [
-    _ChapterFormData(),
-  ];
+  final List<_ChapterFormData> _chapters = [_ChapterFormData()];
 
   String? _coverDataUri;
+  String? _selectedGenre;
   bool _isSubmitting = false;
 
   @override
@@ -66,30 +82,18 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
     }
 
     final preview = _coverDataUri!;
-    if (preview.startsWith('data:image')) {
-      try {
-        final bytes = base64.decode(preview.split(',').last);
-        return Container(
-          width: 90,
-          height: 120,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            image: DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover),
-          ),
-        );
-      } catch (_) {
-        return null;
-      }
+    try {
+      final provider = resolveCoverImage(preview);
+      return Container(
+        width: 90,
+        height: 120,
+        decoration: BoxDecoration(
+          image: DecorationImage(image: provider, fit: BoxFit.cover),
+        ),
+      );
+    } catch (_) {
+      return null;
     }
-
-    return Container(
-      width: 90,
-      height: 120,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        image: DecorationImage(image: NetworkImage(preview), fit: BoxFit.cover),
-      ),
-    );
   }
 
   Future<void> _pickCover() async {
@@ -156,11 +160,15 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
     }
 
     final ratingInput = _ratingController.text.trim();
-    final parsedRating = ratingInput.isEmpty ? 0.0 : double.tryParse(ratingInput);
+    final parsedRating = ratingInput.isEmpty
+        ? 0.0
+        : double.tryParse(ratingInput);
     if (parsedRating == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Format rating tidak valid. Gunakan angka, misalnya 4.5'),
+          content: Text(
+            'Format rating tidak valid. Gunakan angka, misalnya 4.5',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -176,15 +184,40 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
       return;
     }
     final rating = double.parse(parsedRating.toStringAsFixed(2));
+    final selectedGenre = _selectedGenre == _customGenreLabel
+        ? _genreController.text.trim()
+        : (_selectedGenre ?? '').trim();
+    if (selectedGenre.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan pilih genre novel.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
     try {
       final userId = await StorageHelper.getUserId();
       if (userId <= 0) {
-        throw Exception('Sesi pengguna tidak ditemukan. Silakan masuk kembali.');
+        throw Exception(
+          'Sesi pengguna tidak ditemukan. Silakan masuk kembali.',
+        );
       }
+      const imageUploader = ImageUploadService();
       const service = NovelCatalogService();
+      final coverSource = _coverDataUri!.trim();
+      final isRemoteCover =
+          coverSource.startsWith('http://') ||
+          coverSource.startsWith('https://');
+      final coverUrl = isRemoteCover
+          ? coverSource
+          : await imageUploader.uploadFromDataUrl(coverSource);
+      if (!isRemoteCover) {
+        _coverDataUri = coverUrl;
+      }
       await service.createNovel(
         userId: userId,
         payload: {
@@ -192,8 +225,8 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
           'title': _titleController.text.trim(),
           'author': _authorController.text.trim(),
           'synopsis': _synopsisController.text.trim(),
-          'genre': _genreController.text.trim(),
-          'cover_asset': _coverDataUri,
+          'genre': selectedGenre,
+          'cover_asset': coverUrl,
           'marketing_message': _marketingController.text.trim().isEmpty
               ? null
               : _marketingController.text.trim(),
@@ -219,7 +252,9 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
     } catch (error) {
       if (!mounted) return;
       final rawMessage = error.toString();
-      final message = rawMessage.startsWith('Exception: ') ? rawMessage.substring(11) : rawMessage;
+      final message = rawMessage.startsWith('Exception: ')
+          ? rawMessage.substring(11)
+          : rawMessage;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal mengunggah novel: $message'),
@@ -276,21 +311,71 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
                   children: [
                     TextFormField(
                       controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Judul Novel'),
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Judul wajib diisi' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Judul Novel',
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? 'Judul wajib diisi'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _authorController,
                       decoration: const InputDecoration(labelText: 'Penulis'),
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Penulis wajib diisi' : null,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? 'Penulis wajib diisi'
+                          : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _genreController,
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedGenre,
                       decoration: const InputDecoration(labelText: 'Genre'),
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Genre wajib diisi' : null,
+                      hint: const Text('Pilih genre novel'),
+                      items: _genreOptions
+                          .map(
+                            (genre) => DropdownMenuItem<String>(
+                              value: genre,
+                              child: Text(genre),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedGenre = value;
+                          if (value != _customGenreLabel) {
+                            _genreController.text = value ?? '';
+                          } else {
+                            _genreController.clear();
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Genre wajib dipilih';
+                        }
+                        if (value == _customGenreLabel &&
+                            _genreController.text.trim().isEmpty) {
+                          return 'Isi genre kustom terlebih dahulu';
+                        }
+                        return null;
+                      },
                     ),
+                    if (_selectedGenre == _customGenreLabel) ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _genreController,
+                        decoration: const InputDecoration(
+                          labelText: 'Genre kustom',
+                        ),
+                        validator: (value) =>
+                            (_selectedGenre == _customGenreLabel &&
+                                (value == null || value.trim().isEmpty))
+                            ? 'Genre kustom wajib diisi'
+                            : null,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _synopsisController,
@@ -300,18 +385,26 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _ratingController,
-                      decoration: const InputDecoration(labelText: 'Rating (0-5)'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Rating (0-5)',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _marketingController,
-                      decoration: const InputDecoration(labelText: 'Pesan Pemasaran (opsional)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Pesan Pemasaran (opsional)',
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _featureTagController,
-                      decoration: const InputDecoration(labelText: 'Feature Tag (opsional)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Feature Tag (opsional)',
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -351,7 +444,8 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       'Bab ${index + 1}',
@@ -362,20 +456,29 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
                                     ),
                                     if (_chapters.length > 1)
                                       IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                        onPressed: _isSubmitting ? null : () => _removeChapter(index),
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.redAccent,
+                                        ),
+                                        onPressed: _isSubmitting
+                                            ? null
+                                            : () => _removeChapter(index),
                                       ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
                                 TextField(
                                   controller: chapter.titleController,
-                                  decoration: const InputDecoration(labelText: 'Judul Bab'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Judul Bab',
+                                  ),
                                 ),
                                 const SizedBox(height: 12),
                                 TextField(
                                   controller: chapter.contentController,
-                                  decoration: const InputDecoration(labelText: 'Isi Bab'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Isi Bab',
+                                  ),
                                   maxLines: 6,
                                 ),
                               ],
@@ -401,15 +504,22 @@ class _AdminUploadScreenState extends State<AdminUploadScreen> {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                               )
                             : const Icon(Icons.cloud_upload_rounded),
-                        label: Text(_isSubmitting ? 'Mengunggah...' : 'Simpan Novel'),
+                        label: Text(
+                          _isSubmitting ? 'Mengunggah...' : 'Simpan Novel',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
                     ),
@@ -433,4 +543,3 @@ class _ChapterFormData {
     contentController.dispose();
   }
 }
-

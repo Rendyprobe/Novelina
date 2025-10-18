@@ -3,12 +3,14 @@ class UserModel {
   final String email;
   final String name;
   final String role;
+  final String avatarUrl;
 
   const UserModel({
     required this.id,
     required this.email,
     required this.name,
     required this.role,
+    this.avatarUrl = '',
   });
 
   Map<String, dynamic> toJson() {
@@ -17,6 +19,7 @@ class UserModel {
       'email': email,
       'name': name,
       'role': role,
+      'avatar_url': avatarUrl,
     };
   }
 
@@ -26,6 +29,9 @@ class UserModel {
       email: (json['email'] as String?) ?? '',
       name: (json['name'] as String?) ?? '',
       role: (json['role'] as String?)?.toLowerCase() ?? 'user',
+      avatarUrl: (json['avatar_url'] as String?) ??
+          (json['avatarUrl'] as String?) ??
+          '',
     );
   }
 

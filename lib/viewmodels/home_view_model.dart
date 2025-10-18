@@ -9,6 +9,7 @@ class HomeViewModel {
         _catalogService = catalogService ?? const NovelCatalogService() {
     _allNovels = _repository.loadNovels();
     _visibleNovels = List<Novel>.from(_allNovels);
+    _recomputeVisible();
   }
 
   final NovelRepository _repository;
@@ -16,6 +17,7 @@ class HomeViewModel {
   late List<Novel> _allNovels;
   late List<Novel> _visibleNovels;
   String _searchQuery = '';
+  String? _activeGenre;
   bool isLoading = false;
   String? lastError;
 
@@ -37,16 +39,15 @@ class HomeViewModel {
   }
 
   String get searchQuery => _searchQuery;
+  String? get activeGenre => _activeGenre;
   bool get isSearching => _searchQuery.isNotEmpty;
 
   Future<void> loadCatalog() async {
     isLoading = true;
     try {
       final remote = await _catalogService.fetchNovels();
-      if (remote.isNotEmpty) {
-        _allNovels = remote;
-        updateSearch(_searchQuery);
-      }
+      _allNovels = remote;
+      _recomputeVisible();
       lastError = null;
     } catch (error) {
       lastError = error.toString();
@@ -57,17 +58,13 @@ class HomeViewModel {
 
   void updateSearch(String query) {
     _searchQuery = query.trim();
-    if (_searchQuery.isEmpty) {
-      _visibleNovels = List<Novel>.from(_allNovels);
-      return;
-    }
+    _recomputeVisible();
+  }
 
-    final lowerQuery = _searchQuery.toLowerCase();
-    _visibleNovels = _allNovels.where((novel) {
-      return novel.title.toLowerCase().contains(lowerQuery) ||
-          novel.author.toLowerCase().contains(lowerQuery) ||
-          novel.genre.toLowerCase().contains(lowerQuery);
-    }).toList();
+  void applyGenreFilter(String? genre) {
+    final trimmed = genre?.trim();
+    _activeGenre = (trimmed != null && trimmed.isNotEmpty) ? trimmed : null;
+    _recomputeVisible();
   }
 
   void clearSearch() {
@@ -80,5 +77,27 @@ class HomeViewModel {
     } catch (_) {
       return null;
     }
+  }
+
+  void _recomputeVisible() {
+    Iterable<Novel> filtered = _allNovels;
+
+    if (_activeGenre != null && _activeGenre!.isNotEmpty) {
+      final genreLower = _activeGenre!.toLowerCase();
+      filtered = filtered.where(
+        (novel) => novel.genre.toLowerCase() == genreLower,
+      );
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      final lowerQuery = _searchQuery.toLowerCase();
+      filtered = filtered.where((novel) {
+        return novel.title.toLowerCase().contains(lowerQuery) ||
+            novel.author.toLowerCase().contains(lowerQuery) ||
+            novel.genre.toLowerCase().contains(lowerQuery);
+      });
+    }
+
+    _visibleNovels = filtered.toList();
   }
 }

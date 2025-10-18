@@ -47,16 +47,20 @@ class NovelInteractionService {
 
   Future<NovelComment> submitComment({
     required String novelId,
+    required int userId,
     required String userName,
     required String content,
+    String avatarUrl = '',
   }) async {
     final uri = ApiConfig.resolve('/novels/${Uri.encodeComponent(novelId)}/comments');
     final response = await http.post(
       uri,
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({
+        'userId': userId,
         'userName': userName,
         'content': content,
+        if (avatarUrl.trim().isNotEmpty) 'avatarUrl': avatarUrl.trim(),
       }),
     );
     final data = _decodeBody(response);

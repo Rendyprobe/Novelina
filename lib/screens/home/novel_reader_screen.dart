@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/app_colors.dart';
+import '../../models/novel_chapter.dart';
 import '../../models/novel_model.dart';
-import '../../services/story_service.dart';
+import '../../services/novel_catalog_service.dart';
 
 class NovelReaderScreen extends StatefulWidget {
   const NovelReaderScreen({super.key, required this.novel});
@@ -16,143 +18,142 @@ class NovelReaderScreen extends StatefulWidget {
 }
 
 class _NovelReaderScreenState extends State<NovelReaderScreen> {
-  static const EdgeInsets _pageMargin = EdgeInsets.all(20);
-  static const EdgeInsets _pagePadding = EdgeInsets.symmetric(
-    horizontal: 24,
-    vertical: 32,
+  static const EdgeInsets _pageMargin = EdgeInsets.symmetric(
+    horizontal: 14,
+    vertical: 18,
   );
+  static const EdgeInsets _pagePadding = EdgeInsets.symmetric(
+    horizontal: 18,
+    vertical: 22,
+  );
+  static const double _maxPageTurnRadians = 0.9;
 
-  late final PageController _pageController;
+  final NovelCatalogService _catalogService = const NovelCatalogService();
+  final PageController _pageController = PageController();
 
-  String _storyContent = '';
-  List<String> _pages = [];
-  int _currentPageIndex = 0;
-  Size? _lastCalculatedSize;
-  bool _isPaginating = false;
+  List<NovelChapter> _chapters = const [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  int _currentChapterIndex = 0;
+  bool _showSwipeHint = true;
+  double _fontSize = 18;
 
-  TextStyle get _pageTextStyle =>
-      GoogleFonts.literata(fontSize: 18, height: 1.6, color: Colors.black87);
+  static const double _minFontSize = 14;
+  static const double _maxFontSize = 26;
+  static const double _fontStep = 2;
+
+  TextStyle get _bodyTextStyle => GoogleFonts.literata(
+    fontSize: _fontSize,
+    height: 1.6,
+    color: Colors.black87,
+  );
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _loadStoryContent();
-  }
-
-  Future<void> _loadStoryContent() async {
-    try {
-      final content = await StoryService.loadStoryById(widget.novel.id);
-      if (!mounted) return;
-      setState(() {
-        _storyContent = content;
-        _pages = [];
-        _lastCalculatedSize = null;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _storyContent = widget.novel.content;
-        _pages = [];
-        _lastCalculatedSize = null;
-      });
-    }
-  }
-
-  void _ensurePagination(Size availableSize, TextStyle textStyle) {
-    if (_storyContent.isEmpty) return;
-    if (availableSize.width <= 0 || availableSize.height <= 0) return;
-    if (_isPaginating) return;
-    if (_lastCalculatedSize == availableSize && _pages.isNotEmpty) return;
-
-    _isPaginating = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        _isPaginating = false;
-        return;
-      }
-
-      final newPages = _paginateContent(
-        _storyContent,
-        availableSize,
-        textStyle,
-      );
-
-      setState(() {
-        _pages = newPages;
-        _currentPageIndex = _pages.isEmpty
-            ? 0
-            : _currentPageIndex.clamp(0, _pages.length - 1);
-        _lastCalculatedSize = availableSize;
-        _isPaginating = false;
-      });
-
-      if (_pageController.hasClients && _pages.isNotEmpty) {
-        _pageController.jumpToPage(_currentPageIndex);
+    _fetchChapters();
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() => _showSwipeHint = false);
       }
     });
   }
 
-  List<String> _paginateContent(String content, Size size, TextStyle style) {
-    String remaining = content.replaceAll('\r\n', '\n').trimLeft();
-    if (remaining.isEmpty) {
-      return <String>[];
+  Future<void> _fetchChapters() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final chapters = await _catalogService.fetchChapters(widget.novel.id);
+      if (!mounted) return;
+
+      setState(() {
+        _chapters = chapters.isEmpty ? [_buildFallbackChapter()] : chapters;
+        _currentChapterIndex = 0;
+        _isLoading = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(0);
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _chapters = [_buildFallbackChapter()];
+        _currentChapterIndex = 0;
+        _isLoading = false;
+        _errorMessage = error.toString();
+      });
+    }
+  }
+
+  NovelChapter _buildFallbackChapter() {
+    final fallbackContent = widget.novel.content.isNotEmpty
+        ? widget.novel.content
+        : 'Cerita akan segera tersedia. Mohon tunggu update selanjutnya.';
+    return NovelChapter(chapterNo: 1, title: 'Bab 1', content: fallbackContent);
+  }
+
+  void _goToChapter(int targetIndex) {
+    if (!_pageController.hasClients ||
+        targetIndex == _currentChapterIndex ||
+        targetIndex < 0 ||
+        targetIndex >= _chapters.length) {
+      return;
     }
 
-    final painter = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.justify,
-      maxLines: null,
+    setState(() => _currentChapterIndex = targetIndex);
+
+    _pageController.animateToPage(
+      targetIndex,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  Widget _buildFontControlButton({
+    required String tooltip,
+    required String asset,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    final image = Opacity(
+      opacity: enabled ? 1 : 0.35,
+      child: Image.asset(
+        asset,
+        width: 22,
+        height: 22,
+        filterQuality: FilterQuality.high,
+        color: Colors.white,
+        colorBlendMode: BlendMode.srcIn,
+      ),
     );
 
-    final pages = <String>[];
-    final whitespacePattern = RegExp(r'\s');
+    final iconWidget = Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: image,
+    );
 
-    while (remaining.isNotEmpty) {
-      painter.text = TextSpan(text: remaining, style: style);
-      painter.layout(maxWidth: size.width);
-
-      if (painter.height <= size.height || remaining.length <= 1) {
-        pages.add(remaining.trim());
-        break;
-      }
-
-      final position = painter.getPositionForOffset(
-        Offset(size.width, size.height),
-      );
-
-      var end = position.offset;
-
-      if (end <= 0) {
-        end = remaining.length;
-      }
-      if (end >= remaining.length) {
-        pages.add(remaining.trim());
-        break;
-      }
-
-      var safeEnd = end;
-      while (safeEnd > 0 &&
-          safeEnd <= remaining.length &&
-          !whitespacePattern.hasMatch(remaining[safeEnd - 1])) {
-        safeEnd--;
-      }
-
-      if (safeEnd <= 0 || safeEnd == end) {
-        safeEnd = end;
-      }
-
-      final pageText = remaining.substring(0, safeEnd).trimRight();
-      if (pageText.isEmpty) {
-        pages.add(remaining.trim());
-        break;
-      }
-
-      pages.add(pageText);
-      remaining = remaining.substring(safeEnd).trimLeft();
-    }
-
-    return pages;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: enabled ? onTap : null,
+      icon: iconWidget,
+      splashRadius: 18,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 38, height: 38),
+    );
   }
 
   @override
@@ -163,158 +164,381 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = _pageTextStyle;
-
+    final chaptersCount = _chapters.length;
+    final textStyle = _bodyTextStyle;
+    final canDecreaseFont = _fontSize > _minFontSize;
+    final canIncreaseFont = _fontSize < _maxFontSize;
+    final overlayTopOffset = _pageMargin.top + 12;
+    final overlayRightOffset = _pageMargin.right + 12;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5DC),
       appBar: AppBar(
+        title: Text(widget.novel.title),
         backgroundColor: AppColors.primaryBlue,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          widget.novel.title,
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          if (_pages.isNotEmpty)
+          if (!_isLoading && chaptersCount > 0)
             Container(
-              margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              margin: const EdgeInsets.only(right: 16, top: 10, bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                '${_currentPageIndex + 1} / ${_pages.length}',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    iconSize: 24,
+                    icon: Icon(
+                      Icons.chevron_left,
+                      color: _currentChapterIndex > 0
+                          ? Colors.white
+                          : Colors.white38,
+                    ),
+                    onPressed: _currentChapterIndex > 0
+                        ? () => _goToChapter(_currentChapterIndex - 1)
+                        : null,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      '${_currentChapterIndex + 1} / $chaptersCount',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    iconSize: 24,
+                    icon: Icon(
+                      Icons.chevron_right,
+                      color: _currentChapterIndex < chaptersCount - 1
+                          ? Colors.white
+                          : Colors.white38,
+                    ),
+                    onPressed: _currentChapterIndex < chaptersCount - 1
+                        ? () => _goToChapter(_currentChapterIndex + 1)
+                        : null,
+                  ),
+                ],
               ),
             ),
         ],
       ),
       body: SafeArea(
         top: false,
-        child: _storyContent.isEmpty
+        child: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(color: AppColors.primaryBlue),
               )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  final availableWidth =
-                      constraints.maxWidth -
-                      _pageMargin.horizontal -
-                      _pagePadding.horizontal;
-                  final availableHeight =
-                      constraints.maxHeight -
-                      _pageMargin.vertical -
-                      _pagePadding.vertical;
-
-                  if (availableWidth > 0 && availableHeight > 0) {
-                    _ensurePagination(
-                      Size(availableWidth, availableHeight),
-                      textStyle,
-                    );
-                  }
-
-                  if (_pages.isEmpty) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primaryBlue,
+            : chaptersCount == 0
+            ? _buildEmptyState()
+            : Stack(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFFFFFF0), Color(0xFFF7F0D8)],
                       ),
-                    );
-                  }
-
-                  return Stack(
-                    children: [
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFFFFFFF0), Color(0xFFF5F5DC)],
-                          ),
+                    ),
+                  ),
+                  PageView.builder(
+                    controller: _pageController,
+                    itemCount: chaptersCount,
+                    physics: const PageScrollPhysics(),
+                    onPageChanged: (index) {
+                      setState(() => _currentChapterIndex = index);
+                      HapticFeedback.lightImpact();
+                    },
+                    itemBuilder: (context, index) {
+                      return _AnimatedChapterPage(
+                        pageController: _pageController,
+                        index: index,
+                        currentIndex: _currentChapterIndex,
+                        margin: _pageMargin,
+                        padding: _pagePadding,
+                        chapter: _chapters[index],
+                        textStyle: textStyle,
+                      );
+                    },
+                  ),
+                  if (chaptersCount > 0)
+                    Positioned(
+                      top: overlayTopOffset,
+                      right: overlayRightOffset,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildFontControlButton(
+                              tooltip: 'Perbesar teks',
+                              asset: 'assets/icons/zoom_in.png',
+                              enabled: canIncreaseFont,
+                              onTap: () => setState(() {
+                                _fontSize = (_fontSize + _fontStep).clamp(
+                                  _minFontSize,
+                                  _maxFontSize,
+                                );
+                              }),
+                            ),
+                            const SizedBox(width: 12),
+                            _buildFontControlButton(
+                              tooltip: 'Perkecil teks',
+                              asset: 'assets/icons/zoom_out.png',
+                              enabled: canDecreaseFont,
+                              onTap: () => setState(() {
+                                _fontSize = (_fontSize - _fontStep).clamp(
+                                  _minFontSize,
+                                  _maxFontSize,
+                                );
+                              }),
+                            ),
+                          ],
                         ),
                       ),
-                      PageView.builder(
-                        controller: _pageController,
-                        itemCount: _pages.length,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentPageIndex = index;
-                          });
-                          HapticFeedback.lightImpact();
-                        },
-                        physics: const BouncingScrollPhysics(),
-                        itemBuilder: (context, index) {
-                          return Center(
-                            child: Container(
-                              margin: _pageMargin,
-                              padding: _pagePadding,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: double.infinity,
-                                child: Text(
-                                  _pages[index],
-                                  style: textStyle,
-                                  textAlign: TextAlign.justify,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      Positioned(
-                        bottom: 24,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryBlue.withValues(
-                                alpha: 0.8,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              'Geser ke kanan atau kiri untuk berpindah halaman',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
+                    ),
+                  if (_showSwipeHint) _buildSwipeHint(),
+                  if (_errorMessage != null)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 16,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'Gagal memuat bab dari server. Menampilkan konten lokal.',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  );
-                },
+                    ),
+                ],
               ),
       ),
     );
   }
+
+  Widget _buildSwipeHint() {
+    return Positioned(
+      bottom: 24,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: AnimatedOpacity(
+          opacity: _showSwipeHint ? 1 : 0,
+          duration: const Duration(milliseconds: 400),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Geser ke kanan atau kiri untuk berganti bab',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.menu_book_outlined,
+              size: 64,
+              color: AppColors.primaryBlue,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Bab novel belum tersedia.',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryBlue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Silakan kembali lagi nanti untuk membaca cerita lengkapnya.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
+class _AnimatedChapterPage extends StatelessWidget {
+  const _AnimatedChapterPage({
+    required this.pageController,
+    required this.index,
+    required this.currentIndex,
+    required this.margin,
+    required this.padding,
+    required this.chapter,
+    required this.textStyle,
+  });
+
+  final PageController pageController;
+  final int index;
+  final int currentIndex;
+  final EdgeInsets margin;
+  final EdgeInsets padding;
+  final NovelChapter chapter;
+  final TextStyle textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: pageController,
+      builder: (context, child) {
+        double value = 0;
+        if (pageController.position.haveDimensions) {
+          value = pageController.page! - index;
+        } else {
+          value = (currentIndex - index).toDouble();
+        }
+        value = value.clamp(-1.0, 1.0);
+
+        final rotation = value * _NovelReaderScreenState._maxPageTurnRadians;
+        final translation = value * MediaQuery.of(context).size.width * -0.18;
+        final tilt = value.abs() * 0.02;
+
+        final transform = Matrix4.identity()
+          ..setEntry(3, 2, 0.001)
+          ..rotateY(rotation)
+          ..rotateZ(value * 0.02);
+
+        return Transform(
+          transform: transform,
+          alignment: Alignment.center,
+          child: Transform.translate(
+            offset: Offset(translation, 0),
+            child: Transform.scale(scale: 1 - tilt, child: child),
+          ),
+        );
+      },
+      child: _ChapterPage(
+        margin: margin,
+        padding: padding,
+        chapter: chapter,
+        textStyle: textStyle,
+      ),
+    );
+  }
+}
+
+class _ChapterPage extends StatelessWidget {
+  const _ChapterPage({
+    required this.margin,
+    required this.padding,
+    required this.chapter,
+    required this.textStyle,
+  });
+
+  final EdgeInsets margin;
+  final EdgeInsets padding;
+  final NovelChapter chapter;
+  final TextStyle textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: margin,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Scrollbar(
+          thickness: 4,
+          radius: const Radius.circular(12),
+          child: SingleChildScrollView(
+            padding: padding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  chapter.title,
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  chapter.content.trim().isEmpty
+                      ? 'Bab ini belum memiliki konten.'
+                      : chapter.content,
+                  style: textStyle,
+                  textAlign: TextAlign.justify,
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
+
+

@@ -53,15 +53,19 @@ class NovelDetailViewModel {
 
   Future<NovelComment> addComment({
     required String novelId,
+    required int userId,
     required String userName,
     required String content,
+    String avatarUrl = '',
   }) async {
     submittingComment = true;
     try {
       final comment = await _service.submitComment(
         novelId: novelId,
+        userId: userId,
         userName: userName,
         content: content,
+        avatarUrl: avatarUrl,
       );
       comments = [comment, ...comments];
       stats = stats.copyWith(commentCount: stats.commentCount + 1);

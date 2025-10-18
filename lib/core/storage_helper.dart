@@ -6,6 +6,7 @@ class StorageHelper {
   static const String _keyUserEmail = 'user_email';
   static const String _keyUserName = 'user_name';
   static const String _keyUserRole = 'user_role';
+  static const String _keyUserAvatar = 'user_avatar';
 
   static Future<void> setLoginStatus(bool isLoggedIn) async {
     final prefs = await SharedPreferences.getInstance();
@@ -22,12 +23,14 @@ class StorageHelper {
     required String email,
     required String name,
     required String role,
+    String avatar = '',
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyUserId, id);
     await prefs.setString(_keyUserEmail, email);
     await prefs.setString(_keyUserName, name);
     await prefs.setString(_keyUserRole, role);
+    await prefs.setString(_keyUserAvatar, avatar);
   }
 
   static Future<int> getUserId() async {
@@ -48,6 +51,16 @@ class StorageHelper {
   static Future<String> getUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUserRole) ?? 'user';
+  }
+
+  static Future<void> setUserAvatar(String avatarUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserAvatar, avatarUrl);
+  }
+
+  static Future<String> getUserAvatar() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserAvatar) ?? '';
   }
 
   static Future<void> clearUserData() async {

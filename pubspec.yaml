@@ -1,4 +1,4 @@
-name: novelina
+﻿name: novelina
 description: A Flutter application for reading novels.
 
 environment:
@@ -28,4 +28,6 @@ flutter:
   assets:
     - assets/images/
     - assets/stories/
+    - assets/icons/
+
 

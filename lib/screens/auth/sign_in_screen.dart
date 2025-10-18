@@ -7,7 +7,6 @@ import '../../core/storage_helper.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
-import '../admin/admin_upload_screen.dart';
 import 'sign_up_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -77,6 +76,7 @@ class _SignInScreenState extends State<SignInScreen> {
         email: user.email,
         name: user.name,
         role: user.role,
+        avatar: user.avatarUrl,
       );
 
       if (!mounted) return;
@@ -88,17 +88,14 @@ class _SignInScreenState extends State<SignInScreen> {
         ),
       );
 
-      if (user.role == 'admin') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminUploadScreen()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => user.role == 'admin'
+              ? const HomeScreen(openAdminUploadOnInit: true)
+              : const HomeScreen(),
+        ),
+      );
     } on AuthException catch (error) {
       _showSnackBar(error.message);
     } catch (_) {
