@@ -502,22 +502,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           )
         else ...[
-          for (final novel in pageItems)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _NovelListTile(
-                novel: novel,
-                onTap: () => _openNovelDetail(novel),
-                featureTag: novel is FeaturedNovel ? novel.featureTag : null,
-                showAdminControls: isAdmin,
-                isDeleting: novel.id == _deletingNovelId,
-                onDelete:
-                    isAdmin &&
-                        (!hasDeletionInProgress || novel.id == _deletingNovelId)
-                    ? () => _handleDelete(novel)
-                    : null,
-              ),
-            ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: pageItems.length,
+            itemBuilder: (context, index) {
+              final novel = pageItems[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _NovelListTile(
+                  novel: novel,
+                  onTap: () => _openNovelDetail(novel),
+                  featureTag: novel is FeaturedNovel ? novel.featureTag : null,
+                  showAdminControls: isAdmin,
+                  isDeleting: novel.id == _deletingNovelId,
+                  onDelete: isAdmin &&
+                          (!hasDeletionInProgress || novel.id == _deletingNovelId)
+                      ? () => _handleDelete(novel)
+                      : null,
+                ),
+              );
+            },
+          ),
           if (totalPages > 1) ...[
             const SizedBox(height: 8),
             _buildPaginationControls(totalPages, currentPage),
@@ -579,22 +585,28 @@ class _HomeScreenState extends State<HomeScreen> {
       key: const ValueKey('search-results'),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
-        for (final novel in pageItems)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _NovelListTile(
-              novel: novel,
-              onTap: () => _openNovelDetail(novel),
-              featureTag: novel is FeaturedNovel ? novel.featureTag : null,
-              showAdminControls: isAdmin,
-              isDeleting: novel.id == _deletingNovelId,
-              onDelete:
-                  isAdmin &&
-                      (!hasDeletionInProgress || novel.id == _deletingNovelId)
-                  ? () => _handleDelete(novel)
-                  : null,
-            ),
-          ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: pageItems.length,
+          itemBuilder: (context, index) {
+            final novel = pageItems[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _NovelListTile(
+                novel: novel,
+                onTap: () => _openNovelDetail(novel),
+                featureTag: novel is FeaturedNovel ? novel.featureTag : null,
+                showAdminControls: isAdmin,
+                isDeleting: novel.id == _deletingNovelId,
+                onDelete: isAdmin &&
+                        (!hasDeletionInProgress || novel.id == _deletingNovelId)
+                    ? () => _handleDelete(novel)
+                    : null,
+              ),
+            );
+          },
+        ),
         if (totalPages > 1) ...[
           const SizedBox(height: 8),
           _buildPaginationControls(totalPages, currentPage),
